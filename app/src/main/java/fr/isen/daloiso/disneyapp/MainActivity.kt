@@ -11,8 +11,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.google.firebase.Firebase
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.database
 import fr.isen.daloiso.disneyapp.ui.theme.DisneyAppTheme
+
+private fun DatabaseReference.addListenerForSingleValueEvent(listener: Any) {}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,8 +28,21 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         // Test Firebase
-        val database = FirebaseDatabase.getInstance().reference
-        database.child("test").push().setValue("Hello Firebase!")
+        val database = Firebase.database
+        val myRef = database.getReference("categories")
+        myRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                TODO("Not yet implemented")
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                TODO("Not yet implemented")
+            }
+        })
+        fun onDataChange(dataSnapshot: DataSnapshot) {
+            TODO("Not yet implemented")
+        }
+
 
         setContent {
             DisneyAppTheme {
