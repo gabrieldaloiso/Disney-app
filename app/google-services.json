@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1018944516887",
+    "firebase_url": "https://disney-58053-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "disney-58053",
+    "storage_bucket": "disney-58053.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1018944516887:android:c8b5ea6d14fccad7c87d52",
+        "android_client_info": {
+          "package_name": "fr.isen.daloiso.disneyapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXQJh602xLJAZOMipnHlESPxyguEYknAU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
