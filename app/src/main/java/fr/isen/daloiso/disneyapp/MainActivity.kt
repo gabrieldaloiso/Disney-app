@@ -11,15 +11,27 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -27,7 +39,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -40,7 +51,6 @@ import com.google.firebase.database.database
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import fr.isen.daloiso.disneyapp.Screens.LoginScreen
-import fr.isen.daloiso.disneyapp.Screens.ProfileScreen
 import fr.isen.daloiso.disneyapp.Screens.SignupScreen
 import fr.isen.daloiso.disneyapp.ui.theme.DisneyTheme
 
@@ -61,24 +71,20 @@ class MainActivity : ComponentActivity() {
         setContent {
             DisneyTheme {
                 val navController = rememberNavController()
-
-                // Détermine si on doit aller sur Login ou Home au démarrage
-                val startDest = if (FirebaseAuth.getInstance().currentUser != null) "home" else "register"
-
-                NavHost(navController = navController, startDestination = startDest) {
-                    composable("register") { SignupScreen(navController) }
-                    composable("login") { LoginScreen(navController) }
-                    composable("profile") { ProfileScreen(navController) }
-                    composable("home") { HomeScreen(navController) }
+                val startDestination = if (FirebaseAuth.getInstance().currentUser != null) "home" else "register"
+                NavHost(navController = navController, startDestination = startDestination) {
+                    composable("register") { SignupScreen(navController = navController) }
+                    composable("login") { LoginScreen(navController = navController) }
+                    composable("home") { HomeScreen() }
                 }
             }
         }
     }
 }
 
-// ── Écran d'accueil (Ta liste actuelle) ───────────────────────────────────────
+// ── Home ──────────────────────────────────────────────────────────────────────
 @Composable
-fun HomeScreen(navController: NavHostController) {
+fun HomeScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -92,32 +98,15 @@ fun HomeScreen(navController: NavHostController) {
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // HEADER AVEC TITRE ET BOUTON PROFIL
-            Row(
+            Text(
+                text = "Disney App",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 52.dp, start = 24.dp, end = 24.dp, bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Disney App",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-
-                // Icône cliquable pour aller au profil
-                IconButton(onClick = { navController.navigate("profile") }) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Profil",
-                        tint = Light,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-            }
-
+                    .padding(top = 52.dp, start = 24.dp, bottom = 16.dp)
+            )
             LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
                 items(categories) { categorie ->
                     val isExpanded = expandableCategories.any { it.categorie == categorie.categorie }
@@ -264,23 +253,10 @@ fun FilmList(films: List<Film>) {
                     .padding(vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "•",
-                    color = Light,
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(
-                    text = film.titre,
-                    fontSize = 13.sp,
-                    color = TextPrimary
-                )
+                Text(text = "•", color = Light, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
+                Text(text = film.titre, fontSize = 13.sp, color = TextPrimary)
                 film.annee?.let {
-                    Text(
-                        text = "  ($it)",
-                        fontSize = 12.sp,
-                        color = TextSecondary
-                    )
+                    Text(text = "  ($it)", fontSize = 12.sp, color = TextSecondary)
                 }
             }
         }
