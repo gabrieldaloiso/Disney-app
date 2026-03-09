@@ -1,6 +1,9 @@
 package fr.isen.daloiso.disneyapp.Screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.painterResource
+import fr.isen.daloiso.disneyapp.R
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.Column
@@ -70,6 +73,14 @@ fun LoginScreen(navController: NavHostController) {
                 .padding(28.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
+                Image(
+                    painter = painterResource(id = R.drawable.disneymoins),
+                    contentDescription = "Disney Logo",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .padding(top = 16.dp, bottom = 8.dp)
+                )
                 Text(
                     text = "Welcome Back!",
                     modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp),
