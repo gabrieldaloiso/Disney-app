@@ -17,7 +17,10 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
-import fr.isen.daloiso.disneyapp.Screens.LoginScreen
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import fr.isen.daloiso.disneyapp.Screens.SignupScreen
 import fr.isen.daloiso.disneyapp.ui.theme.DisneyAppTheme
 
 private fun DatabaseReference.addListenerForSingleValueEvent(listener: Any) {}
@@ -32,25 +35,23 @@ class MainActivity : ComponentActivity() {
         val myRef = database.getReference("categories")
         myRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                TODO("Not yet implemented")
+                // TODO("Not yet implemented")
             }
 
             override fun onCancelled(error: DatabaseError) {
-                TODO("Not yet implemented")
+                // TODO("Not yet implemented")
             }
         })
-        fun onDataChange(dataSnapshot: DataSnapshot) {
-            TODO("Not yet implemented")
-        }
+        // fun onDataChange(dataSnapshot: DataSnapshot) {
+        //     TODO("Not yet implemented")
+        // }
 
 
         setContent {
             DisneyAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                val navController = rememberNavController()
+                NavHost(navController = navController, startDestination = "register") {
+                    composable("register") { SignupScreen(navController = navController) }
                 }
             }
         }
