@@ -33,7 +33,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.database.*
 
-// ── Palette identique Login/Signup ───────────────────────────────────────────
+
 private val GradTop    = Color(0xFF1A5C6E)
 private val GradBot    = Color(0xFF071220)
 private val Accent     = Color(0xFF1DADC0)
@@ -44,7 +44,6 @@ private val GrayLight  = Color(0xFFB0B8C8)
 private val CardBg     = Color(0x22FFFFFF)
 private val CardBorder = Color(0x33FFFFFF)
 
-// ── Avatars avec URL d'images officielles ────────────────────────────────────
 data class AvatarOption(val id: String, val label: String, val resId: Int, val fallback: String)
 
 val AVATAR_LIST = listOf(
@@ -57,7 +56,6 @@ val AVATAR_LIST = listOf(
     AvatarOption("elsa",    "Elsa",    R.drawable.elsa,    "E"),
 )
 
-// ── Data model ────────────────────────────────────────────────────────────────
 data class UserFilmEntry(
     val filmId: String = "",
     val title: String = "",
@@ -71,7 +69,6 @@ enum class FilmStatus(val label: String, val icon: ImageVector, val color: Color
     WANT_TO_SELL( "À céder", Icons.Outlined.Sell,       Color(0xFFE67E22))
 }
 
-// ── Screen ────────────────────────────────────────────────────────────────────
 @Composable
 fun ProfileScreen(navController: NavHostController?) {
     val auth = FirebaseAuth.getInstance()
@@ -153,7 +150,6 @@ fun ProfileScreen(navController: NavHostController?) {
         )
     }
 
-    // ── Root ──────────────────────────────────────────────────────────────────
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -164,7 +160,6 @@ fun ProfileScreen(navController: NavHostController?) {
             contentPadding = PaddingValues(bottom = 48.dp)
         ) {
 
-            // ── Header profil ─────────────────────────────────────────────────
             item {
                 Column(
                     modifier            = Modifier.fillMaxWidth().padding(top = 56.dp, bottom = 24.dp),
@@ -244,13 +239,12 @@ fun ProfileScreen(navController: NavHostController?) {
                 }
             }
 
-            // Séparateur
+
             item {
                 Divider(color = CardBorder, thickness = 1.dp, modifier = Modifier.padding(horizontal = 20.dp))
                 Spacer(Modifier.height(16.dp))
             }
 
-            // Titre section
             item {
                 Row(
                     modifier          = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -263,7 +257,6 @@ fun ProfileScreen(navController: NavHostController?) {
                 Spacer(Modifier.height(14.dp))
             }
 
-            // Filtres
             item {
                 LazyRow(
                     contentPadding        = PaddingValues(horizontal = 20.dp),
@@ -281,7 +274,6 @@ fun ProfileScreen(navController: NavHostController?) {
                 }
             }
 
-            // Loading
             if (isLoading) {
                 item {
                     Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
@@ -305,7 +297,6 @@ fun ProfileScreen(navController: NavHostController?) {
                 }
             }
 
-            // ── Bouton déconnexion tout en bas ────────────────────────────────
             item {
                 Spacer(Modifier.height(24.dp))
                 TextButton(
@@ -325,7 +316,6 @@ fun ProfileScreen(navController: NavHostController?) {
     }
 }
 
-// ── Avatar image locale (res/drawable) ───────────────────────────────────────
 @Composable
 fun AvatarImage(avatar: AvatarOption) {
     androidx.compose.foundation.Image(
@@ -336,7 +326,6 @@ fun AvatarImage(avatar: AvatarOption) {
     )
 }
 
-// ── Avatar Picker Dialog ──────────────────────────────────────────────────────
 @Composable
 fun AvatarPickerDialog(current: String, onSelect: (String) -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
@@ -410,7 +399,6 @@ fun AvatarPickerDialog(current: String, onSelect: (String) -> Unit, onDismiss: (
     }
 }
 
-// ── Filter pill ───────────────────────────────────────────────────────────────
 @Composable
 fun FilterPill(label: String, selected: Boolean, color: Color, icon: ImageVector? = null, onClick: () -> Unit) {
     Row(
@@ -430,7 +418,6 @@ fun FilterPill(label: String, selected: Boolean, color: Color, icon: ImageVector
     }
 }
 
-// ── Film card ─────────────────────────────────────────────────────────────────
 @Composable
 fun FilmCard(entry: UserFilmEntry, onRemove: () -> Unit) {
     var showConfirm by remember { mutableStateOf(false) }
