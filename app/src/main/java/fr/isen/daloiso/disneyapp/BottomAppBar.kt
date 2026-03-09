@@ -71,11 +71,11 @@ fun BottomAppBar(items: List<BottomNavItem>, navController: NavController) {
                 label = {
                     Text(
                         text = item.title,
-                        color = if (selectedTabIndex == index) Color(0xFF6650A4) else Color(0xFFB0C8D0)
+                        color = if (selectedTabIndex == index) Color(0xFF1DADC0) else Color(0xFFB0C8D0)
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color(0xFF6650A4),
+                    selectedIconColor = Color(0xFF1DADC0),
                     unselectedIconColor = Color(0xFFB0C8D0),
                     indicatorColor = Color(0xFF1E3A45)
                 )
