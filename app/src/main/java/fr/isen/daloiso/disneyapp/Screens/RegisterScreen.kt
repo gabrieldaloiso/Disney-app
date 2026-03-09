@@ -1,6 +1,8 @@
 package fr.isen.daloiso.disneyapp.Screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -56,11 +58,19 @@ fun SignupScreen(navController: NavHostController) {
     var passwordVisible by remember { mutableStateOf(false) }
     var checked by remember { mutableStateOf(false) }
 
-    Surface(
-        color = Color.White,
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFF1A5C6E), Color(0xFF071220))
+                )
+            )
+    ) {
+    Surface(
+        color = Color.Transparent,
+        modifier = Modifier
+            .fillMaxSize()
             .padding(28.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -68,14 +78,14 @@ fun SignupScreen(navController: NavHostController) {
                 text = "Hello There!",
                 modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp),
                 style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Normal, fontStyle = FontStyle.Normal),
-                color = Color.Black,
+                color = Color.White,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = "Create an account",
                 modifier = Modifier.fillMaxWidth().heightIn(),
                 style = TextStyle(fontSize = 30.sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Normal),
-                color = Color.Black,
+                color = Color.White,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(25.dp))
@@ -190,7 +200,7 @@ fun SignupScreen(navController: NavHostController) {
                 }
                 ClickableText(
                     modifier = Modifier.fillMaxWidth(),
-                    style = TextStyle(textAlign = TextAlign.Center, color = Color.Black),
+                    style = TextStyle(textAlign = TextAlign.Center, color = Color.White),
                     text = annotatedString,
                     onClick = { offset ->
                         annotatedString.getStringAnnotations(offset, offset)
@@ -199,5 +209,6 @@ fun SignupScreen(navController: NavHostController) {
                 )
             }
         }
+    }
     }
 }
