@@ -39,18 +39,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import fr.isen.daloiso.disneyapp.Screens.LoginScreen
+import fr.isen.daloiso.disneyapp.Screens.SignupScreen
 import fr.isen.daloiso.disneyapp.ui.theme.DisneyTheme
 
 // ── Couleurs ──────────────────────────────────────────────────────────────────
 private val BgGradient    = Brush.linearGradient(listOf(Color(0xFF1A5C6E), Color(0xFF071220)))
-private val Light  = Color(0xFFF5F5F5)
+private val Light         = Color(0xFFF5F5F5)
 private val CardBg        = Color(0xFF1E3A45)
 private val CardBgDeep    = Color(0xFF122533)
 private val TextPrimary   = Color.White
@@ -64,44 +70,55 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             DisneyTheme {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(brush = BgGradient)
-                ) {
-                    val categories = remember { mutableStateListOf<Categorie>() }
-                    val expandableCategories = remember { mutableStateListOf<Categorie>() }
+                val navController = rememberNavController()
+                val startDestination = if (FirebaseAuth.getInstance().currentUser != null) "home" else "register"
+                NavHost(navController = navController, startDestination = startDestination) {
+                    composable("register") { SignupScreen(navController = navController) }
+                    composable("login") { LoginScreen(navController = navController) }
+                    composable("home") { HomeScreen() }
+                }
+            }
+        }
+    }
+}
 
-                    LaunchedEffect(Unit) {
-                        DataBaseHelper().getCategories { categories.addAll(it) }
-                    }
+// ── Home ──────────────────────────────────────────────────────────────────────
+@Composable
+fun HomeScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(brush = BgGradient)
+    ) {
+        val categories = remember { mutableStateListOf<Categorie>() }
+        val expandableCategories = remember { mutableStateListOf<Categorie>() }
 
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Text(
-                            text = "Disney App",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 52.dp, start = 24.dp, bottom = 16.dp)
-                        )
+        LaunchedEffect(Unit) {
+            DataBaseHelper().getCategories { categories.addAll(it) }
+        }
 
-                        LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
-                            items(categories) { categorie ->
-                                val isExpanded = expandableCategories.any { it.categorie == categorie.categorie }
-                                CategoryCard(
-                                    categorie = categorie,
-                                    isExpanded = isExpanded,
-                                    onToggle = {
-                                        if (isExpanded) expandableCategories.removeAll { it.categorie == categorie.categorie }
-                                        else expandableCategories.add(categorie)
-                                    }
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                            }
+        Column(modifier = Modifier.fillMaxSize()) {
+            Text(
+                text = "Disney App",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 52.dp, start = 24.dp, bottom = 16.dp)
+            )
+            LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
+                items(categories) { categorie ->
+                    val isExpanded = expandableCategories.any { it.categorie == categorie.categorie }
+                    CategoryCard(
+                        categorie = categorie,
+                        isExpanded = isExpanded,
+                        onToggle = {
+                            if (isExpanded) expandableCategories.removeAll { it.categorie == categorie.categorie }
+                            else expandableCategories.add(categorie)
                         }
-                    }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
@@ -236,23 +253,10 @@ fun FilmList(films: List<Film>) {
                     .padding(vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "•",
-                    color = Light,
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(
-                    text = film.titre,
-                    fontSize = 13.sp,
-                    color = TextPrimary
-                )
+                Text(text = "•", color = Light, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
+                Text(text = film.titre, fontSize = 13.sp, color = TextPrimary)
                 film.annee?.let {
-                    Text(
-                        text = "  ($it)",
-                        fontSize = 12.sp,
-                        color = TextSecondary
-                    )
+                    Text(text = "  ($it)", fontSize = 12.sp, color = TextSecondary)
                 }
             }
         }
