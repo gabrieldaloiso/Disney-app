@@ -9,7 +9,9 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -132,15 +134,15 @@ fun HomeScreen(navController: NavHostController) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            text = "Disney App",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary,
+        Image(
+            painter = painterResource(id = R.drawable.disneymoins),
+            contentDescription = "Disney Logo",
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 24.dp, start = 24.dp, bottom = 16.dp)
+                .height(90.dp)
+                .padding(top = 24.dp, start = 24.dp, bottom = 8.dp)
         )
+        Spacer(modifier = Modifier.height(16.dp))
         LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
             items(categories) { categorie ->
                 val isExpanded = expandableCategories.any { it.categorie == categorie.categorie }
