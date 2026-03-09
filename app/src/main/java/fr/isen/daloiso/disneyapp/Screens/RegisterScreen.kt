@@ -95,12 +95,12 @@ fun SignupScreen(navController: NavHostController) {
                     value = firstName,
                     onValueChange = { firstName = it },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF6650A4),
-                        focusedLabelColor = Color(0xFF6650A4),
-                        cursorColor = Color(0xFF6650A4),
+                        focusedBorderColor = Color(0xFF1DADC0),
+                        focusedLabelColor = Color(0xFF1DADC0),
+                        cursorColor = Color(0xFF1DADC0),
                         focusedContainerColor = Color(0xFFF5F5F5),
                         unfocusedContainerColor = Color(0xFFF5F5F5),
-                        focusedLeadingIconColor = Color(0xFF6650A4),
+                        focusedLeadingIconColor = Color(0xFF1DADC0),
                         focusedTextColor = Color(0xFF1C1B1F),
                         unfocusedTextColor = Color(0xFF1C1B1F)
                     ),
@@ -115,12 +115,12 @@ fun SignupScreen(navController: NavHostController) {
                     value = lastName,
                     onValueChange = { lastName = it },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF6650A4),
-                        focusedLabelColor = Color(0xFF6650A4),
-                        cursorColor = Color(0xFF6650A4),
+                        focusedBorderColor = Color(0xFF1DADC0),
+                        focusedLabelColor = Color(0xFF1DADC0),
+                        cursorColor = Color(0xFF1DADC0),
                         focusedContainerColor = Color(0xFFF5F5F5),
                         unfocusedContainerColor = Color(0xFFF5F5F5),
-                        focusedLeadingIconColor = Color(0xFF6650A4),
+                        focusedLeadingIconColor = Color(0xFF1DADC0),
                         focusedTextColor = Color(0xFF1C1B1F),
                         unfocusedTextColor = Color(0xFF1C1B1F)
                     ),
@@ -135,12 +135,12 @@ fun SignupScreen(navController: NavHostController) {
                     value = email,
                     onValueChange = { email = it },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF6650A4),
-                        focusedLabelColor = Color(0xFF6650A4),
-                        cursorColor = Color(0xFF6650A4),
+                        focusedBorderColor = Color(0xFF1DADC0),
+                        focusedLabelColor = Color(0xFF1DADC0),
+                        cursorColor = Color(0xFF1DADC0),
                         focusedContainerColor = Color(0xFFF5F5F5),
                         unfocusedContainerColor = Color(0xFFF5F5F5),
-                        focusedLeadingIconColor = Color(0xFF6650A4),
+                        focusedLeadingIconColor = Color(0xFF1DADC0),
                         focusedTextColor = Color(0xFF1C1B1F),
                         unfocusedTextColor = Color(0xFF1C1B1F)
                     ),
@@ -155,12 +155,12 @@ fun SignupScreen(navController: NavHostController) {
                     value = password,
                     onValueChange = { password = it },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF6650A4),
-                        focusedLabelColor = Color(0xFF6650A4),
-                        cursorColor = Color(0xFF6650A4),
+                        focusedBorderColor = Color(0xFF1DADC0),
+                        focusedLabelColor = Color(0xFF1DADC0),
+                        cursorColor = Color(0xFF1DADC0),
                         focusedContainerColor = Color(0xFFF5F5F5),
                         unfocusedContainerColor = Color(0xFFF5F5F5),
-                        focusedLeadingIconColor = Color(0xFF6650A4),
+                        focusedLeadingIconColor = Color(0xFF1DADC0),
                         focusedTextColor = Color(0xFF1C1B1F),
                         unfocusedTextColor = Color(0xFF1C1B1F)
                     ),
@@ -179,20 +179,30 @@ fun SignupScreen(navController: NavHostController) {
                     keyboardOptions = KeyboardOptions.Default
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = checked, onCheckedChange = { checked = it })
-                    Text(text = "I accept the terms and conditions")
+                    Checkbox(
+                        checked = checked,
+                        onCheckedChange = { checked = it },
+                        colors = androidx.compose.material3.CheckboxDefaults.colors(
+                            checkedColor = Color(0xFF1DADC0),
+                            uncheckedColor = Color(0xFF1DADC0)
+                        )
+                    )
+                    Text(text = "I accept the terms and conditions", color = Color.White)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = { },
-                    modifier = Modifier.fillMaxWidth().heightIn(48.dp)
+                    modifier = Modifier.fillMaxWidth().heightIn(48.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF1DADC0)
+                    )
                 ) {
                     Text(text = "Register", fontSize = 18.sp)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 val annotatedString = buildAnnotatedString {
                     append("Already have an account? ")
-                    withStyle(style = SpanStyle(color = Color(0xFF6650A4), fontWeight = FontWeight.Bold)) {
+                    withStyle(style = SpanStyle(color = Color(0xFF1DADC0), fontWeight = FontWeight.Bold)) {
                         pushStringAnnotation(tag = "Login", annotation = "Login")
                         append("Login")
                         pop()
