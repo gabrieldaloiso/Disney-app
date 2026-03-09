@@ -33,6 +33,12 @@ import com.google.firebase.database.database
 import com.google.firebase.database.getValue
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.google.firebase.auth.FirebaseAuth
+import fr.isen.daloiso.disneyapp.Screens.LoginScreen
+import fr.isen.daloiso.disneyapp.Screens.SignupScreen
 import fr.isen.daloiso.disneyapp.ui.theme.DisneyTheme
 
 class MainActivity : ComponentActivity() {
@@ -42,33 +48,34 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             DisneyTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    val categories = remember {
-                        mutableStateListOf<Categorie>()
-                    }
-                    val expandableCategories = remember {
-                        mutableStateListOf<Categorie>()
-                    }
-                    LaunchedEffect(Unit) {
-                        DataBaseHelper().getCategories {
-                            categories.addAll(it)
-                        }
-                    }
-
-                    LazyColumn(modifier = Modifier.padding(innerPadding)) {
-                        items(categories) { categorie ->
-                            Column() {
-                                Card(Modifier.clickable {
-                                    if (expandableCategories.firstOrNull { it.categorie == categorie.categorie } != null) {
-                                        expandableCategories.removeAll { it.categorie == categorie.categorie }
-                                    } else {
-                                        expandableCategories.add(categorie)
+                val navController = rememberNavController()
+                val startDestination = if (FirebaseAuth.getInstance().currentUser != null) "home" else "register"
+                NavHost(navController = navController, startDestination = startDestination) {
+                    composable("register") { SignupScreen(navController = navController) }
+                    composable("login") { LoginScreen(navController = navController) }
+                    composable("home") {
+                        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                            val categories = remember { mutableStateListOf<Categorie>() }
+                            val expandableCategories = remember { mutableStateListOf<Categorie>() }
+                            LaunchedEffect(Unit) {
+                                DataBaseHelper().getCategories { categories.addAll(it) }
+                            }
+                            LazyColumn(modifier = Modifier.padding(innerPadding)) {
+                                items(categories) { categorie ->
+                                    Column {
+                                        Card(Modifier.clickable {
+                                            if (expandableCategories.firstOrNull { it.categorie == categorie.categorie } != null) {
+                                                expandableCategories.removeAll { it.categorie == categorie.categorie }
+                                            } else {
+                                                expandableCategories.add(categorie)
+                                            }
+                                        }) {
+                                            Text("${categorie.categorie}")
+                                        }
+                                        if (expandableCategories.firstOrNull { it.categorie == categorie.categorie } != null) {
+                                            franchises(categorie.franchises)
+                                        }
                                     }
-                                }) {
-                                    Text("${categorie.categorie}")
-                                }
-                                if(expandableCategories.firstOrNull { it.categorie == categorie.categorie } != null) {
-                                    franchises(categorie.franchises)
                                 }
                             }
                         }

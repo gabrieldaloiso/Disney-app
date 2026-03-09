@@ -44,12 +44,15 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun LoginScreen(navController: NavHostController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+    val auth = FirebaseAuth.getInstance()
 
     Box(
         modifier = Modifier
@@ -132,8 +135,26 @@ fun LoginScreen(navController: NavHostController) {
                         keyboardOptions = KeyboardOptions.Default
                     )
                     Spacer(modifier = Modifier.height(16.dp))
+                    if (errorMessage.isNotEmpty()) {
+                        Text(text = errorMessage, color = Color.Red, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                     Button(
-                        onClick = { },
+                        onClick = {
+                            if (email.isBlank() || password.isBlank()) {
+                                errorMessage = "Email et mot de passe requis"
+                            } else {
+                                auth.signInWithEmailAndPassword(email, password)
+                                    .addOnSuccessListener {
+                                        navController.navigate("home") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
+                                    }
+                                    .addOnFailureListener { e ->
+                                        errorMessage = e.message ?: "Erreur inconnue"
+                                    }
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth().heightIn(48.dp),
                         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF1DADC0)
