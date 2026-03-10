@@ -127,6 +127,7 @@ fun LoginScreen(navController: NavHostController) {
                             unfocusedTextColor = Color(0xFF1C1B1F)
                         ),
                         modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
                         shape = MaterialTheme.shapes.medium,
                         leadingIcon = { Icon(imageVector = Icons.Outlined.Email, contentDescription = null) },
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -148,6 +149,7 @@ fun LoginScreen(navController: NavHostController) {
                             unfocusedTextColor = Color(0xFF1C1B1F)
                         ),
                         modifier = Modifier.fillMaxWidth().focusRequester(passwordFocusRequester),
+                        singleLine = true,
                         shape = MaterialTheme.shapes.medium,
                         leadingIcon = { Icon(imageVector = Icons.Outlined.Lock, contentDescription = null) },
                         trailingIcon = {
