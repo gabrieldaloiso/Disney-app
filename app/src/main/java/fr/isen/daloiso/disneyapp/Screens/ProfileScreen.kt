@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavHostController
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.database.*
@@ -63,11 +64,11 @@ data class UserFilmEntry(
 )
 
 enum class FilmStatus(val label: String, val icon: ImageVector, val color: Color) {
-    WATCHED(      "Vu",          Icons.Outlined.Visibility,   Accent),
-    WANT_TO_WATCH("À voir",      Icons.Outlined.Bookmark,     Color(0xFF9B59B6)),
+    WATCHED(      "Vu",                          Icons.Outlined.Visibility,   Accent),
+    WANT_TO_WATCH("À voir",                      Icons.Outlined.Bookmark,     Color(0xFF9B59B6)),
     OWNED(        "Je recherche ce Blu-Ray",     Icons.Outlined.Search,       Color(0xFF27AE60)),
     WANT_TO_SELL( "Je veux céder ce Blu-Ray",   Icons.Outlined.Sell,         Color(0xFFE67E22)),
-    POSSESSED(    "Je possède ce Blu-Ray",      Icons.Outlined.CheckCircle,  Color(0xFF1ABC9C))
+    POSSESSED(    "Je possède ce Blu-Ray",       Icons.Outlined.CheckCircle,  Color(0xFF1ABC9C))
 }
 
 @Composable
@@ -75,11 +76,12 @@ fun ProfileScreen(navController: NavHostController?) {
     val auth = FirebaseAuth.getInstance()
     val user = auth.currentUser
 
-    var userEmail        by remember { mutableStateOf(user?.email ?: "") }
-    var filmEntries      by remember { mutableStateOf<List<UserFilmEntry>>(emptyList()) }
-    var showLogout       by remember { mutableStateOf(false) }
-    var showAvatarPicker by remember { mutableStateOf(false) }
-    var selectedAvatarId by remember { mutableStateOf("mickey") }
+    var userEmail           by remember { mutableStateOf(user?.email ?: "") }
+    var filmEntries         by remember { mutableStateOf<List<UserFilmEntry>>(emptyList()) }
+    var showLogout          by remember { mutableStateOf(false) }
+    var showAvatarPicker    by remember { mutableStateOf(false) }
+    var selectedAvatarId    by remember { mutableStateOf("mickey") }
+    var showPasswordDialog  by remember { mutableStateOf(false) }
     val uid = user?.uid
 
     DisposableEffect(uid) {
@@ -129,6 +131,13 @@ fun ProfileScreen(navController: NavHostController?) {
             onDismiss = { showAvatarPicker = false }
         )
     }
+    if (showPasswordDialog) {
+        ChangePasswordDialog(
+            auth      = auth,
+            onDismiss = { showPasswordDialog = false }
+        )
+    }
+
     if (showLogout) {
         AlertDialog(
             onDismissRequest = { showLogout = false },
@@ -158,7 +167,7 @@ fun ProfileScreen(navController: NavHostController?) {
             modifier       = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 48.dp)
         ) {
-            // ── Header ────────────────────────────────────────────────────────
+
             item {
                 Column(
                     modifier            = Modifier.fillMaxWidth().padding(top = 56.dp, bottom = 28.dp),
@@ -196,7 +205,7 @@ fun ProfileScreen(navController: NavHostController?) {
                 }
             }
 
-            // ── Titre section ─────────────────────────────────────────────────
+
             item {
                 HorizontalDivider(color = CardBorder, modifier = Modifier.padding(horizontal = 20.dp))
                 Spacer(Modifier.height(20.dp))
@@ -210,7 +219,7 @@ fun ProfileScreen(navController: NavHostController?) {
                 Spacer(Modifier.height(14.dp))
             }
 
-            // ── Carte par statut ──────────────────────────────────────────────
+
             items(FilmStatus.values()) { status ->
                 val count = filmEntries.count { it.statuses.contains(status) }
                 StatusCategoryCard(
@@ -221,7 +230,20 @@ fun ProfileScreen(navController: NavHostController?) {
             }
         }
 
-        // ── Bouton déconnexion haut droite ────────────────────────────────────
+        IconButton(
+            onClick  = { showPasswordDialog = true },
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 12.dp, start = 8.dp)
+        ) {
+            Icon(
+                imageVector        = Icons.Outlined.Settings,
+                contentDescription = "Paramètres",
+                tint               = Accent,
+                modifier           = Modifier.size(26.dp)
+            )
+        }
+
         IconButton(
             onClick  = { showLogout = true },
             modifier = Modifier
@@ -238,7 +260,166 @@ fun ProfileScreen(navController: NavHostController?) {
     }
 }
 
-// ── Carte catégorie statut ────────────────────────────────────────────────────
+
+@Composable
+fun ChangePasswordDialog(auth: FirebaseAuth, onDismiss: () -> Unit) {
+    var oldPassword  by remember { mutableStateOf("") }
+    var newPassword  by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var oldVisible   by remember { mutableStateOf(false) }
+    var newVisible   by remember { mutableStateOf(false) }
+    var confirmVisible by remember { mutableStateOf(false) }
+    var errorMsg     by remember { mutableStateOf("") }
+    var successMsg   by remember { mutableStateOf("") }
+    var isLoading    by remember { mutableStateOf(false) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Brush.linearGradient(listOf(GradTop, GradBot)), RoundedCornerShape(20.dp))
+                .border(1.dp, CardBorder, RoundedCornerShape(20.dp))
+                .padding(24.dp)
+        ) {
+            Column {
+                // Titre
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Lock, null, tint = Accent, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Modifier le mot de passe", color = White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Outlined.Close, null, tint = GrayLight, modifier = Modifier.size(16.dp))
+                    }
+                }
+                Spacer(Modifier.height(20.dp))
+
+                // Ancien mot de passe
+                OutlinedTextField(
+                    value         = oldPassword,
+                    onValueChange = { oldPassword = it; errorMsg = "" },
+                    label         = { Text("Mot de passe actuel", color = GrayLight, fontSize = 13.sp) },
+                    singleLine    = true,
+                    visualTransformation = if (oldVisible) androidx.compose.ui.text.input.VisualTransformation.None
+                    else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    trailingIcon  = {
+                        IconButton(onClick = { oldVisible = !oldVisible }) {
+                            Icon(if (oldVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null, tint = GrayLight)
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor   = Accent,
+                        unfocusedBorderColor = CardBorder,
+                        focusedTextColor     = White,
+                        unfocusedTextColor   = White,
+                        cursorColor          = Accent
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+
+                // Nouveau mot de passe
+                OutlinedTextField(
+                    value         = newPassword,
+                    onValueChange = { newPassword = it; errorMsg = "" },
+                    label         = { Text("Nouveau mot de passe", color = GrayLight, fontSize = 13.sp) },
+                    singleLine    = true,
+                    visualTransformation = if (newVisible) androidx.compose.ui.text.input.VisualTransformation.None
+                    else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    trailingIcon  = {
+                        IconButton(onClick = { newVisible = !newVisible }) {
+                            Icon(if (newVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null, tint = GrayLight)
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor   = Accent,
+                        unfocusedBorderColor = CardBorder,
+                        focusedTextColor     = White,
+                        unfocusedTextColor   = White,
+                        cursorColor          = Accent
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+
+                // Confirmer nouveau mot de passe
+                OutlinedTextField(
+                    value         = confirmPassword,
+                    onValueChange = { confirmPassword = it; errorMsg = "" },
+                    label         = { Text("Confirmer le nouveau mot de passe", color = GrayLight, fontSize = 13.sp) },
+                    singleLine    = true,
+                    visualTransformation = if (confirmVisible) androidx.compose.ui.text.input.VisualTransformation.None
+                    else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    trailingIcon  = {
+                        IconButton(onClick = { confirmVisible = !confirmVisible }) {
+                            Icon(if (confirmVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null, tint = GrayLight)
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor   = Accent,
+                        unfocusedBorderColor = CardBorder,
+                        focusedTextColor     = White,
+                        unfocusedTextColor   = White,
+                        cursorColor          = Accent
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (errorMsg.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(errorMsg, color = Color(0xFFE57373), fontSize = 13.sp)
+                }
+                if (successMsg.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(successMsg, color = Color(0xFF4CAF50), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+
+                Button(
+                    onClick = {
+                        when {
+                            oldPassword.isBlank() -> errorMsg = "Entrez votre mot de passe actuel"
+                            newPassword.length < 6 -> errorMsg = "Le nouveau mot de passe doit faire au moins 6 caractères"
+                            newPassword != confirmPassword -> errorMsg = "Les mots de passe ne correspondent pas"
+                            else -> {
+                                isLoading = true
+                                val user = auth.currentUser
+                                val email = user?.email ?: ""
+                                val credential = EmailAuthProvider.getCredential(email, oldPassword)
+                                user?.reauthenticate(credential)?.addOnSuccessListener {
+                                    user.updatePassword(newPassword).addOnSuccessListener {
+                                        isLoading = false
+                                        successMsg = "Mot de passe modifié ✓"
+                                        errorMsg = ""
+                                    }.addOnFailureListener {
+                                        isLoading = false
+                                        errorMsg = "Erreur lors de la modification"
+                                    }
+                                }?.addOnFailureListener {
+                                    isLoading = false
+                                    errorMsg = "Mot de passe actuel incorrect"
+                                }
+                            }
+                        }
+                    },
+                    enabled  = !isLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors   = ButtonDefaults.buttonColors(containerColor = Accent),
+                    shape    = RoundedCornerShape(10.dp)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(color = White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    } else {
+                        Text("Modifier", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = White)
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun StatusCategoryCard(status: FilmStatus, count: Int, onClick: () -> Unit) {
     Row(
@@ -272,7 +453,6 @@ fun StatusCategoryCard(status: FilmStatus, count: Int, onClick: () -> Unit) {
     }
 }
 
-// ── Page films par statut ─────────────────────────────────────────────────────
 @Composable
 fun ProfileFilmsScreen(navController: NavHostController, status: FilmStatus) {
     val uid = FirebaseAuth.getInstance().currentUser?.uid
@@ -319,7 +499,6 @@ fun ProfileFilmsScreen(navController: NavHostController, status: FilmStatus) {
             .background(Brush.linearGradient(colors = listOf(GradTop, GradBot)))
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header
             Row(
                 modifier          = Modifier.fillMaxWidth().padding(top = 24.dp, start = 8.dp, end = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -491,7 +670,6 @@ fun FilmCard(entry: UserFilmEntry, onRemove: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Colonne de petites icônes pour chaque statut actif
         Column(
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally

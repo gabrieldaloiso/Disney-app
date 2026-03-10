@@ -29,6 +29,7 @@ import androidx.compose.ui.text.withStyle
 import com.google.firebase.database.*
 import fr.isen.daloiso.disneyapp.FilmSelection
 
+
 private val GradTop    = Color(0xFF1A5C6E)
 private val GradBot    = Color(0xFF071220)
 private val Accent     = Color(0xFF1DADC0)
@@ -39,6 +40,7 @@ private val GrayLight  = Color(0xFFB0B8C8)
 private val CardBg     = Color(0x22FFFFFF)
 private val CardBorder = Color(0x33FFFFFF)
 
+// ── Data model
 data class SearchResult(
     val filmId: String,
     val titre: String,
@@ -48,6 +50,7 @@ data class SearchResult(
     val numero: Int = 0
 )
 
+// ── Screen
 @Composable
 fun SearchScreen(navController: NavHostController?) {
     var query         by remember { mutableStateOf("") }
@@ -72,7 +75,7 @@ fun SearchScreen(navController: NavHostController?) {
                             val numero = film.child("numero").getValue(Long::class.java)?.toInt() ?: 0
                             films.add(SearchResult(film.key ?: "", titre, annee, universeName, genre, numero))
                         }
-
+                        // Films dans les sous_sagas (underscore, pas camelCase)
                         franchise.child("sous_sagas").children.forEach { saga ->
                             saga.child("films").children.forEach { film ->
                                 val titre  = film.child("titre").getValue(String::class.java) ?: return@forEach
@@ -91,6 +94,8 @@ fun SearchScreen(navController: NavHostController?) {
             override fun onCancelled(error: DatabaseError) { isLoading = false }
         })
     }
+
+    // Filtrage en temps réel
     val results = remember(query, allFilms) {
         if (query.isBlank()) emptyList()
         else allFilms.filter {
@@ -105,6 +110,7 @@ fun SearchScreen(navController: NavHostController?) {
             .background(Brush.linearGradient(colors = listOf(GradTop, GradBot)))
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
+
 
             Column(
                 modifier = Modifier
@@ -121,11 +127,10 @@ fun SearchScreen(navController: NavHostController?) {
                 Text(
                     text       = "Trouvez n'importe quel film Disney",
                     color      = GrayLight,
-                    fontSize   = 16.sp,
+                    fontSize   = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(16.dp))
-
 
                 Row(
                     modifier = Modifier
@@ -144,7 +149,7 @@ fun SearchScreen(navController: NavHostController?) {
                         onValueChange = { query = it },
                         placeholder   = {
                             Text(
-                                "Ex:Marvel, Star Wars...",
+                                "Ex: Lion King, Marvel, Star Wars...",
                                 color    = TextDark.copy(alpha = 0.4f),
                                 fontSize = 15.sp
                             )
@@ -175,17 +180,16 @@ fun SearchScreen(navController: NavHostController?) {
                     }
                 }
             }
-
-
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
-
+                    // Chargement initial
                     isLoading -> {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(color = Accent, strokeWidth = 2.5.dp, modifier = Modifier.size(36.dp))
                         }
                     }
 
+                    // Aucune recherche encore
                     query.isBlank() -> {
                         Column(
                             modifier            = Modifier.fillMaxSize().padding(top = 60.dp),
@@ -211,8 +215,6 @@ fun SearchScreen(navController: NavHostController?) {
                             )
                         }
                     }
-
-
                     results.isEmpty() -> {
                         Column(
                             modifier            = Modifier.fillMaxSize().padding(top = 60.dp),
@@ -240,6 +242,7 @@ fun SearchScreen(navController: NavHostController?) {
                         }
                     }
 
+                    // Résultats
                     else -> {
                         LazyColumn(
                             contentPadding        = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
@@ -276,6 +279,7 @@ fun SearchScreen(navController: NavHostController?) {
     }
 }
 
+
 @Composable
 fun SearchResultCard(film: SearchResult, query: String, onClick: () -> Unit) {
     Row(
@@ -288,7 +292,7 @@ fun SearchResultCard(film: SearchResult, query: String, onClick: () -> Unit) {
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-
+        // Icône film
         Box(
             modifier = Modifier
                 .size(42.dp)
@@ -336,6 +340,7 @@ fun SearchResultCard(film: SearchResult, query: String, onClick: () -> Unit) {
         Icon(Icons.Outlined.ChevronRight, null, tint = GrayLight, modifier = Modifier.size(18.dp))
     }
 }
+
 
 @Composable
 fun HighlightedText(
