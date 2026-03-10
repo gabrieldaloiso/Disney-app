@@ -24,7 +24,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import Film
+import androidx.compose.ui.text.withStyle
 import com.google.firebase.database.*
+import fr.isen.daloiso.disneyapp.FilmSelection
 
 private val GradTop    = Color(0xFF1A5C6E)
 private val GradBot    = Color(0xFF071220)
@@ -40,7 +43,9 @@ data class SearchResult(
     val filmId: String,
     val titre: String,
     val annee: String,
-    val universe: String
+    val universe: String,
+    val genre: String = "",
+    val numero: Int = 0
 )
 
 @Composable
@@ -58,20 +63,24 @@ fun SearchScreen(navController: NavHostController?) {
                 snapshot.children.forEach { categorie ->
                     val universeName = categorie.child("categorie").getValue(String::class.java) ?: ""
                     categorie.child("franchises").children.forEach { franchise ->
-
+                        // Films directs dans la franchise
                         franchise.child("films").children.forEach { film ->
-                            val titre = film.child("titre").getValue(String::class.java) ?: return@forEach
-                            val annee = film.child("annee").getValue(Long::class.java)?.toString()
+                            val titre  = film.child("titre").getValue(String::class.java) ?: return@forEach
+                            val annee  = film.child("annee").getValue(Long::class.java)?.toString()
                                 ?: film.child("annee").getValue(String::class.java) ?: ""
-                            films.add(SearchResult(film.key ?: "", titre, annee, universeName))
+                            val genre  = film.child("genre").getValue(String::class.java) ?: ""
+                            val numero = film.child("numero").getValue(Long::class.java)?.toInt() ?: 0
+                            films.add(SearchResult(film.key ?: "", titre, annee, universeName, genre, numero))
                         }
 
                         franchise.child("sous_sagas").children.forEach { saga ->
                             saga.child("films").children.forEach { film ->
-                                val titre = film.child("titre").getValue(String::class.java) ?: return@forEach
-                                val annee = film.child("annee").getValue(Long::class.java)?.toString()
+                                val titre  = film.child("titre").getValue(String::class.java) ?: return@forEach
+                                val annee  = film.child("annee").getValue(Long::class.java)?.toString()
                                     ?: film.child("annee").getValue(String::class.java) ?: ""
-                                films.add(SearchResult(film.key ?: "", titre, annee, universeName))
+                                val genre  = film.child("genre").getValue(String::class.java) ?: ""
+                                val numero = film.child("numero").getValue(Long::class.java)?.toInt() ?: 0
+                                films.add(SearchResult(film.key ?: "", titre, annee, universeName, genre, numero))
                             }
                         }
                     }
@@ -82,8 +91,6 @@ fun SearchScreen(navController: NavHostController?) {
             override fun onCancelled(error: DatabaseError) { isLoading = false }
         })
     }
-
-
     val results = remember(query, allFilms) {
         if (query.isBlank()) emptyList()
         else allFilms.filter {
@@ -92,14 +99,12 @@ fun SearchScreen(navController: NavHostController?) {
         }
     }
 
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Brush.linearGradient(colors = listOf(GradTop, GradBot)))
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-
 
             Column(
                 modifier = Modifier
@@ -116,8 +121,8 @@ fun SearchScreen(navController: NavHostController?) {
                 Text(
                     text       = "Trouvez n'importe quel film Disney",
                     color      = GrayLight,
-                    fontSize   = 14.sp,
-                   // fontWeight = FontWeight.Bold
+                    fontSize   = 16.sp,
+                    fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(16.dp))
 
@@ -139,7 +144,7 @@ fun SearchScreen(navController: NavHostController?) {
                         onValueChange = { query = it },
                         placeholder   = {
                             Text(
-                                "Ex: Marvel, Star Wars...",
+                                "Ex: Lion King, Marvel, Star Wars...",
                                 color    = TextDark.copy(alpha = 0.4f),
                                 fontSize = 15.sp
                             )
@@ -171,8 +176,10 @@ fun SearchScreen(navController: NavHostController?) {
                 }
             }
 
+
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
+
                     isLoading -> {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(color = Accent, strokeWidth = 2.5.dp, modifier = Modifier.size(36.dp))
@@ -204,6 +211,7 @@ fun SearchScreen(navController: NavHostController?) {
                             )
                         }
                     }
+
 
                     results.isEmpty() -> {
                         Column(
@@ -250,7 +258,13 @@ fun SearchScreen(navController: NavHostController?) {
                                     film      = film,
                                     query     = query,
                                     onClick   = {
-
+                                        FilmSelection.selectedFilm = Film(
+                                            titre  = film.titre,
+                                            annee  = film.annee.toIntOrNull(),
+                                            genre  = film.genre.ifBlank { null },
+                                            numero = film.numero
+                                        )
+                                        navController?.navigate("film_detail")
                                     }
                                 )
                             }
@@ -267,66 +281,59 @@ fun SearchResultCard(film: SearchResult, query: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(CardBg, RoundedCornerShape(12.dp))
-            .border(1.dp, CardBorder, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(CardBg)
+            .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
 
         Box(
             modifier = Modifier
-                .size(44.dp)
-                .background(Accent.copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
+                .size(42.dp)
+                .background(Accent.copy(alpha = 0.12f), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                Icons.Outlined.Movie,
-                contentDescription = null,
-                tint     = Accent,
-                modifier = Modifier.size(22.dp)
-            )
+            Icon(Icons.Outlined.Movie, null, tint = Accent, modifier = Modifier.size(20.dp))
         }
 
-        Spacer(Modifier.width(14.dp))
+        Spacer(Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-
             HighlightedText(
-                text      = film.titre,
-                highlight = query,
-                fontSize  = 15.sp,
+                text       = film.titre,
+                highlight  = query,
+                fontSize   = 15.sp,
                 fontWeight = FontWeight.SemiBold
             )
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(5.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .background(Accent.copy(alpha = 0.12f), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .background(Accent.copy(alpha = 0.10f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
                 ) {
                     Text(
                         film.universe,
-                        color      = Accent,
-                        fontSize   = 11.sp,
+                        color    = Accent,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
-                        maxLines   = 1,
-                        overflow   = TextOverflow.Ellipsis
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 if (film.annee.isNotBlank()) {
-                    Spacer(Modifier.width(8.dp))
-                    Text(film.annee, color = GrayLight, fontSize = 12.sp)
+                    Text(
+                        "  •  ${film.annee}",
+                        color    = GrayLight,
+                        fontSize = 12.sp
+                    )
                 }
             }
         }
 
-        Icon(
-            Icons.Outlined.ChevronRight,
-            contentDescription = null,
-            tint     = GrayLight,
-            modifier = Modifier.size(20.dp)
-        )
+        Icon(Icons.Outlined.ChevronRight, null, tint = GrayLight, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -341,57 +348,26 @@ fun HighlightedText(
         Text(text, color = White, fontSize = fontSize, fontWeight = fontWeight, maxLines = 1, overflow = TextOverflow.Ellipsis)
         return
     }
-    val annotated = buildAnnotatedText(text, highlight)
-    Text(annotated, fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
-}
 
-fun buildAnnotatedText(text: String, highlight: String): androidx.compose.ui.text.AnnotatedString {
-    val builder = androidx.compose.ui.text.AnnotatedString.Builder()
-    val lowerText = text.lowercase()
-    val lowerHighlight = highlight.lowercase()
-    var start = 0
-    while (true) {
-        val idx = lowerText.indexOf(lowerHighlight, start)
-        if (idx == -1) {
-            builder.append(
-                androidx.compose.ui.text.AnnotatedString(
-                    text,
-                    listOf(androidx.compose.ui.text.AnnotatedString.Range(
-                        androidx.compose.ui.text.SpanStyle(color = White),
-                        start, text.length
-                    ))
-                )
-            )
-            break
+    val annotated = androidx.compose.ui.text.buildAnnotatedString {
+        val lower      = text.lowercase()
+        val lowerQuery = highlight.lowercase()
+        var cursor     = 0
+        while (cursor < text.length) {
+            val idx = lower.indexOf(lowerQuery, cursor)
+            if (idx == -1) {
+                withStyle(androidx.compose.ui.text.SpanStyle(color = White)) { append(text.substring(cursor)) }
+                break
+            }
+            if (idx > cursor) {
+                withStyle(androidx.compose.ui.text.SpanStyle(color = White)) { append(text.substring(cursor, idx)) }
+            }
+            val end = idx + highlight.length
+            withStyle(androidx.compose.ui.text.SpanStyle(color = Accent, fontWeight = FontWeight.ExtraBold)) {
+                append(text.substring(idx, end))
+            }
+            cursor = end
         }
-
-        if (idx > start) {
-            builder.append(
-                androidx.compose.ui.text.AnnotatedString(
-                    text.substring(start, idx),
-                    listOf(androidx.compose.ui.text.AnnotatedString.Range(
-                        androidx.compose.ui.text.SpanStyle(color = White),
-                        0, idx - start
-                    ))
-                )
-            )
-        }
-
-        val end = idx + highlight.length
-        builder.append(
-            androidx.compose.ui.text.AnnotatedString(
-                text.substring(idx, end),
-                listOf(androidx.compose.ui.text.AnnotatedString.Range(
-                    androidx.compose.ui.text.SpanStyle(
-                        color      = Accent,
-                        fontWeight = FontWeight.ExtraBold,
-                        background = Accent.copy(alpha = 0.15f)
-                    ),
-                    0, end - idx
-                ))
-            )
-        )
-        start = end
     }
-    return builder.toAnnotatedString()
+    Text(annotated, fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
