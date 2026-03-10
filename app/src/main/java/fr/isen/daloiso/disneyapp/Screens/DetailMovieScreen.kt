@@ -2,6 +2,8 @@ package fr.isen.daloiso.disneyapp.Screens
 
 import Film
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -46,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -89,8 +94,35 @@ suspend fun fetchPosterUrl(titre: String, annee: Int?): String? {
 fun FilmDetailScreen(navController: NavHostController, film: Film) {
     var posterUrl by remember { mutableStateOf<String?>(null) }
 
+    val uid    = FirebaseAuth.getInstance().currentUser?.uid
+    val filmId = film.titre.replace(Regex("[^A-Za-z0-9]"), "_")
+    var currentStatus by remember { mutableStateOf<FilmStatus?>(null) }
+
     LaunchedEffect(film.titre) {
         posterUrl = fetchPosterUrl(film.titre, film.annee)
+    }
+
+    LaunchedEffect(filmId, uid) {
+        uid ?: return@LaunchedEffect
+        FirebaseDatabase.getInstance()
+            .getReference("users/$uid/films/$filmId/status")
+            .get()
+            .addOnSuccessListener { snap ->
+                val statusStr = snap.getValue(String::class.java)
+                currentStatus = FilmStatus.values().find { it.name == statusStr }
+            }
+    }
+
+    fun saveStatus(status: FilmStatus) {
+        uid ?: return
+        val ref = FirebaseDatabase.getInstance().getReference("users/$uid/films/$filmId")
+        if (currentStatus == status) {
+            ref.removeValue()
+            currentStatus = null
+        } else {
+            ref.setValue(mapOf("title" to film.titre, "status" to status.name))
+            currentStatus = status
+        }
     }
 
     Column(
@@ -218,6 +250,18 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
                 }
             }
         }
+
+        // ── Boutons collection en cercle ──────────────────────────────────────
+        Spacer(modifier = Modifier.height(32.dp))
+        Box(modifier = Modifier.size(200.dp)) {
+            val statuses = FilmStatus.values()
+            StatusCircleButton(statuses[0], currentStatus == statuses[0], Modifier.align(Alignment.TopCenter))    { saveStatus(statuses[0]) }
+            StatusCircleButton(statuses[1], currentStatus == statuses[1], Modifier.align(Alignment.CenterEnd))    { saveStatus(statuses[1]) }
+            StatusCircleButton(statuses[2], currentStatus == statuses[2], Modifier.align(Alignment.BottomCenter)) { saveStatus(statuses[2]) }
+            StatusCircleButton(statuses[3], currentStatus == statuses[3], Modifier.align(Alignment.CenterStart))  { saveStatus(statuses[3]) }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -246,6 +290,29 @@ fun InfoRow(icon: ImageVector, label: String, value: String) {
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = Light
+        )
+    }
+}
+
+// ── Bouton circulaire statut ───────────────────────────────────────────────────
+@Composable
+fun StatusCircleButton(status: FilmStatus, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(56.dp)
+            .background(
+                color = if (isSelected) status.color else status.color.copy(alpha = 0.15f),
+                shape = CircleShape
+            )
+            .border(2.dp, status.color, CircleShape)
+            .clickable { onClick() }
+    ) {
+        Icon(
+            imageVector = status.icon,
+            contentDescription = status.label,
+            tint = if (isSelected) Color.White else status.color,
+            modifier = Modifier.size(26.dp)
         )
     }
 }
