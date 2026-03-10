@@ -16,7 +16,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
@@ -58,6 +63,21 @@ fun LoginScreen(navController: NavHostController) {
     var passwordVisible by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     val auth = FirebaseAuth.getInstance()
+    val passwordFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    fun doLogin() {
+        focusManager.clearFocus()
+        if (email.isBlank() || password.isBlank()) {
+            errorMessage = "Email et mot de passe requis"
+        } else {
+            auth.signInWithEmailAndPassword(email, password)
+                .addOnSuccessListener {
+                    navController.navigate("home") { popUpTo("login") { inclusive = true } }
+                }
+                .addOnFailureListener { e -> errorMessage = e.message ?: "Erreur inconnue" }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -109,7 +129,8 @@ fun LoginScreen(navController: NavHostController) {
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
                         leadingIcon = { Icon(imageVector = Icons.Outlined.Email, contentDescription = null) },
-                        keyboardOptions = KeyboardOptions.Default
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { passwordFocusRequester.requestFocus() })
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
@@ -126,7 +147,7 @@ fun LoginScreen(navController: NavHostController) {
                             focusedTextColor = Color(0xFF1C1B1F),
                             unfocusedTextColor = Color(0xFF1C1B1F)
                         ),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().focusRequester(passwordFocusRequester),
                         shape = MaterialTheme.shapes.medium,
                         leadingIcon = { Icon(imageVector = Icons.Outlined.Lock, contentDescription = null) },
                         trailingIcon = {
@@ -138,7 +159,8 @@ fun LoginScreen(navController: NavHostController) {
                             }
                         },
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions.Default
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { doLogin() })
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     if (errorMessage.isNotEmpty()) {
@@ -146,21 +168,7 @@ fun LoginScreen(navController: NavHostController) {
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                     Button(
-                        onClick = {
-                            if (email.isBlank() || password.isBlank()) {
-                                errorMessage = "Email et mot de passe requis"
-                            } else {
-                                auth.signInWithEmailAndPassword(email, password)
-                                    .addOnSuccessListener {
-                                        navController.navigate("home") {
-                                            popUpTo("login") { inclusive = true }
-                                        }
-                                    }
-                                    .addOnFailureListener { e ->
-                                        errorMessage = e.message ?: "Erreur inconnue"
-                                    }
-                            }
-                        },
+                        onClick = { doLogin() },
                         modifier = Modifier.fillMaxWidth().heightIn(48.dp),
                         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF1DADC0)
