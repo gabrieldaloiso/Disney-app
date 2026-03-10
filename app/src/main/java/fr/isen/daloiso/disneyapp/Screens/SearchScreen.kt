@@ -26,9 +26,14 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import Film
 import androidx.compose.ui.text.withStyle
+import coil.compose.AsyncImage
 import com.google.firebase.database.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.URL
+import java.net.URLEncoder
 import fr.isen.daloiso.disneyapp.FilmSelection
-
 
 private val GradTop    = Color(0xFF1A5C6E)
 private val GradBot    = Color(0xFF071220)
@@ -40,7 +45,23 @@ private val GrayLight  = Color(0xFFB0B8C8)
 private val CardBg     = Color(0x22FFFFFF)
 private val CardBorder = Color(0x33FFFFFF)
 
-// ── Data model
+private const val SEARCH_TMDB_KEY = "37b0694785cebb5ccca028e53f38e0cb"
+private const val SEARCH_TMDB_IMG = "https://image.tmdb.org/t/p/w185"
+
+suspend fun fetchSearchPoster(titre: String): String? = withContext(Dispatchers.IO) {
+    try {
+        val q = URLEncoder.encode(titre, "UTF-8")
+        val url = "https://api.themoviedb.org/3/search/movie?api_key=$SEARCH_TMDB_KEY&query=$q&language=fr-FR"
+        val json = JSONObject(URL(url).readText())
+        val results = json.getJSONArray("results")
+        if (results.length() > 0) {
+            val path = results.getJSONObject(0).optString("poster_path", "")
+            if (path.isNotEmpty()) "$SEARCH_TMDB_IMG$path" else null
+        } else null
+    } catch (e: Exception) { null }
+}
+
+
 data class SearchResult(
     val filmId: String,
     val titre: String,
@@ -50,7 +71,6 @@ data class SearchResult(
     val numero: Int = 0
 )
 
-// ── Screen
 @Composable
 fun SearchScreen(navController: NavHostController?) {
     var query         by remember { mutableStateOf("") }
@@ -75,7 +95,7 @@ fun SearchScreen(navController: NavHostController?) {
                             val numero = film.child("numero").getValue(Long::class.java)?.toInt() ?: 0
                             films.add(SearchResult(film.key ?: "", titre, annee, universeName, genre, numero))
                         }
-                        // Films dans les sous_sagas (underscore, pas camelCase)
+
                         franchise.child("sous_sagas").children.forEach { saga ->
                             saga.child("films").children.forEach { film ->
                                 val titre  = film.child("titre").getValue(String::class.java) ?: return@forEach
@@ -95,7 +115,6 @@ fun SearchScreen(navController: NavHostController?) {
         })
     }
 
-    // Filtrage en temps réel
     val results = remember(query, allFilms) {
         if (query.isBlank()) emptyList()
         else allFilms.filter {
@@ -110,7 +129,6 @@ fun SearchScreen(navController: NavHostController?) {
             .background(Brush.linearGradient(colors = listOf(GradTop, GradBot)))
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-
 
             Column(
                 modifier = Modifier
@@ -131,6 +149,7 @@ fun SearchScreen(navController: NavHostController?) {
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(16.dp))
+
 
                 Row(
                     modifier = Modifier
@@ -180,16 +199,15 @@ fun SearchScreen(navController: NavHostController?) {
                     }
                 }
             }
+
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
-                    // Chargement initial
                     isLoading -> {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(color = Accent, strokeWidth = 2.5.dp, modifier = Modifier.size(36.dp))
                         }
                     }
 
-                    // Aucune recherche encore
                     query.isBlank() -> {
                         Column(
                             modifier            = Modifier.fillMaxSize().padding(top = 60.dp),
@@ -215,6 +233,8 @@ fun SearchScreen(navController: NavHostController?) {
                             )
                         }
                     }
+
+
                     results.isEmpty() -> {
                         Column(
                             modifier            = Modifier.fillMaxSize().padding(top = 60.dp),
@@ -242,7 +262,7 @@ fun SearchScreen(navController: NavHostController?) {
                         }
                     }
 
-                    // Résultats
+
                     else -> {
                         LazyColumn(
                             contentPadding        = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
@@ -279,7 +299,6 @@ fun SearchScreen(navController: NavHostController?) {
     }
 }
 
-
 @Composable
 fun SearchResultCard(film: SearchResult, query: String, onClick: () -> Unit) {
     Row(
@@ -292,14 +311,26 @@ fun SearchResultCard(film: SearchResult, query: String, onClick: () -> Unit) {
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Icône film
+
+        var posterUrl by remember(film.filmId) { mutableStateOf<String?>(null) }
+        LaunchedEffect(film.filmId) { posterUrl = fetchSearchPoster(film.titre) }
         Box(
             modifier = Modifier
-                .size(42.dp)
-                .background(Accent.copy(alpha = 0.12f), RoundedCornerShape(10.dp)),
+                .size(52.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Accent.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Outlined.Movie, null, tint = Accent, modifier = Modifier.size(20.dp))
+            if (posterUrl != null) {
+                AsyncImage(
+                    model              = posterUrl,
+                    contentDescription = film.titre,
+                    contentScale       = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier           = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(Icons.Outlined.Movie, null, tint = Accent, modifier = Modifier.size(20.dp))
+            }
         }
 
         Spacer(Modifier.width(12.dp))
@@ -340,7 +371,6 @@ fun SearchResultCard(film: SearchResult, query: String, onClick: () -> Unit) {
         Icon(Icons.Outlined.ChevronRight, null, tint = GrayLight, modifier = Modifier.size(18.dp))
     }
 }
-
 
 @Composable
 fun HighlightedText(

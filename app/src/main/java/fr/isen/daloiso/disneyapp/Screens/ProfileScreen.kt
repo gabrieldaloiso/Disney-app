@@ -1,7 +1,6 @@
 package fr.isen.daloiso.disneyapp.Screens
 
 import fr.isen.daloiso.disneyapp.R
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,10 +30,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.database.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.URL
+import java.net.URLEncoder
+
+
+private const val TMDB_KEY = "37b0694785cebb5ccca028e53f38e0cb"
+private const val TMDB_IMG = "https://image.tmdb.org/t/p/w185"
 
 private val GradTop    = Color(0xFF1A5C6E)
 private val GradBot    = Color(0xFF071220)
@@ -55,6 +65,8 @@ val AVATAR_LIST = listOf(
     AvatarOption("moana",   "Moana",   R.drawable.moana,   "Mo"),
     AvatarOption("buzz",    "Buzz",    R.drawable.buzz,    "B"),
     AvatarOption("elsa",    "Elsa",    R.drawable.elsa,    "E"),
+    AvatarOption("grogu",    "Grogu",    R.drawable.grogu,    "G"),
+
 )
 
 data class UserFilmEntry(
@@ -64,11 +76,24 @@ data class UserFilmEntry(
 )
 
 enum class FilmStatus(val label: String, val icon: ImageVector, val color: Color) {
-    WATCHED(      "Vu",                          Icons.Outlined.Visibility,       Color(0xFF1DADC0)),
-    WANT_TO_WATCH("À voir",                      Icons.Outlined.Bookmark,     Color(0xFF1DB085)),
-    OWNED(        "Je recherche ce Blu-Ray",     Icons.Outlined.Search,       Color(0xFF6E72D1)),
-    WANT_TO_SELL( "Je veux céder ce Blu-Ray",   Icons.Outlined.Sell,         Color(0xFFAF7AC5)),
-    POSSESSED(    "Je possède ce Blu-Ray",       Icons.Outlined.CheckCircle,  Color(0xFFF1948A))
+    WATCHED(      "Vu",                        Icons.Outlined.Visibility,  Accent),
+    WANT_TO_WATCH("À voir",                    Icons.Outlined.Bookmark,    Color(0xFF9B59B6)),
+    OWNED(        "Je recherche ce Blu-Ray",   Icons.Outlined.Search,      Color(0xFF27AE60)),
+    WANT_TO_SELL( "Je veux céder ce Blu-Ray",  Icons.Outlined.Sell,        Color(0xFFE67E22)),
+    POSSESSED(    "Je possède ce Blu-Ray",     Icons.Outlined.CheckCircle, Color(0xFF2ECC71))
+}
+
+suspend fun fetchPoster(titre: String): String? = withContext(Dispatchers.IO) {
+    try {
+        val q = URLEncoder.encode(titre, "UTF-8")
+        val url = "https://api.themoviedb.org/3/search/movie?api_key=$TMDB_KEY&query=$q&language=fr-FR"
+        val json = JSONObject(URL(url).readText())
+        val results = json.getJSONArray("results")
+        if (results.length() > 0) {
+            val path = results.getJSONObject(0).optString("poster_path", "")
+            if (path.isNotEmpty()) "$TMDB_IMG$path" else null
+        } else null
+    } catch (e: Exception) { null }
 }
 
 @Composable
@@ -76,12 +101,12 @@ fun ProfileScreen(navController: NavHostController?) {
     val auth = FirebaseAuth.getInstance()
     val user = auth.currentUser
 
-    var userEmail           by remember { mutableStateOf(user?.email ?: "") }
-    var filmEntries         by remember { mutableStateOf<List<UserFilmEntry>>(emptyList()) }
-    var showLogout          by remember { mutableStateOf(false) }
-    var showAvatarPicker    by remember { mutableStateOf(false) }
-    var selectedAvatarId    by remember { mutableStateOf("mickey") }
-    var showPasswordDialog  by remember { mutableStateOf(false) }
+    var userEmail          by remember { mutableStateOf(user?.email ?: "") }
+    var filmEntries        by remember { mutableStateOf<List<UserFilmEntry>>(emptyList()) }
+    var showLogout         by remember { mutableStateOf(false) }
+    var showAvatarPicker   by remember { mutableStateOf(false) }
+    var selectedAvatarId   by remember { mutableStateOf("mickey") }
+    var showPasswordDialog by remember { mutableStateOf(false) }
     val uid = user?.uid
 
     DisposableEffect(uid) {
@@ -132,12 +157,8 @@ fun ProfileScreen(navController: NavHostController?) {
         )
     }
     if (showPasswordDialog) {
-        ChangePasswordDialog(
-            auth      = auth,
-            onDismiss = { showPasswordDialog = false }
-        )
+        ChangePasswordDialog(auth = auth, onDismiss = { showPasswordDialog = false })
     }
-
     if (showLogout) {
         AlertDialog(
             onDismissRequest = { showLogout = false },
@@ -167,7 +188,6 @@ fun ProfileScreen(navController: NavHostController?) {
             modifier       = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 48.dp)
         ) {
-
             item {
                 Column(
                     modifier            = Modifier.fillMaxWidth().padding(top = 56.dp, bottom = 28.dp),
@@ -205,7 +225,6 @@ fun ProfileScreen(navController: NavHostController?) {
                 }
             }
 
-
             item {
                 HorizontalDivider(color = CardBorder, modifier = Modifier.padding(horizontal = 20.dp))
                 Spacer(Modifier.height(20.dp))
@@ -219,59 +238,45 @@ fun ProfileScreen(navController: NavHostController?) {
                 Spacer(Modifier.height(14.dp))
             }
 
-
             items(FilmStatus.values()) { status ->
                 val count = filmEntries.count { it.statuses.contains(status) }
                 StatusCategoryCard(
-                    status = status,
-                    count  = count,
+                    status  = status,
+                    count   = count,
                     onClick = { navController?.navigate("profile_films/${status.name}") }
                 )
             }
         }
 
+        // Roue paramètres — haut gauche
         IconButton(
             onClick  = { showPasswordDialog = true },
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(top = 12.dp, start = 8.dp)
+            modifier = Modifier.align(Alignment.TopStart).padding(top = 12.dp, start = 8.dp)
         ) {
-            Icon(
-                imageVector        = Icons.Outlined.Settings,
-                contentDescription = "Paramètres",
-                tint               = Accent,
-                modifier           = Modifier.size(26.dp)
-            )
+            Icon(Icons.Outlined.Settings, "Paramètres", tint = Accent, modifier = Modifier.size(26.dp))
         }
 
+        // Déconnexion — haut droite
         IconButton(
             onClick  = { showLogout = true },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 12.dp, end = 8.dp)
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 8.dp)
         ) {
-            Icon(
-                imageVector        = Icons.Outlined.Logout,
-                contentDescription = "Se déconnecter",
-                tint               = Accent,
-                modifier           = Modifier.size(26.dp)
-            )
+            Icon(Icons.Outlined.Logout, "Se déconnecter", tint = Accent, modifier = Modifier.size(26.dp))
         }
     }
 }
 
-
 @Composable
 fun ChangePasswordDialog(auth: FirebaseAuth, onDismiss: () -> Unit) {
-    var oldPassword  by remember { mutableStateOf("") }
-    var newPassword  by remember { mutableStateOf("") }
+    var oldPassword     by remember { mutableStateOf("") }
+    var newPassword     by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var oldVisible   by remember { mutableStateOf(false) }
-    var newVisible   by remember { mutableStateOf(false) }
-    var confirmVisible by remember { mutableStateOf(false) }
-    var errorMsg     by remember { mutableStateOf("") }
-    var successMsg   by remember { mutableStateOf("") }
-    var isLoading    by remember { mutableStateOf(false) }
+    var oldVisible      by remember { mutableStateOf(false) }
+    var newVisible      by remember { mutableStateOf(false) }
+    var confirmVisible  by remember { mutableStateOf(false) }
+    var errorMsg        by remember { mutableStateOf("") }
+    var successMsg      by remember { mutableStateOf("") }
+    var isLoading       by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
@@ -282,7 +287,6 @@ fun ChangePasswordDialog(auth: FirebaseAuth, onDismiss: () -> Unit) {
                 .padding(24.dp)
         ) {
             Column {
-                // Titre
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Lock, null, tint = Accent, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
@@ -294,7 +298,6 @@ fun ChangePasswordDialog(auth: FirebaseAuth, onDismiss: () -> Unit) {
                 }
                 Spacer(Modifier.height(20.dp))
 
-                // Ancien mot de passe
                 OutlinedTextField(
                     value         = oldPassword,
                     onValueChange = { oldPassword = it; errorMsg = "" },
@@ -307,18 +310,11 @@ fun ChangePasswordDialog(auth: FirebaseAuth, onDismiss: () -> Unit) {
                             Icon(if (oldVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null, tint = GrayLight)
                         }
                     },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = Accent,
-                        unfocusedBorderColor = CardBorder,
-                        focusedTextColor     = White,
-                        unfocusedTextColor   = White,
-                        cursorColor          = Accent
-                    ),
+                    colors   = OutlinedTextFieldDefaults.colors(focusedBorderColor = Accent, unfocusedBorderColor = CardBorder, focusedTextColor = White, unfocusedTextColor = White, cursorColor = Accent),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(12.dp))
 
-                // Nouveau mot de passe
                 OutlinedTextField(
                     value         = newPassword,
                     onValueChange = { newPassword = it; errorMsg = "" },
@@ -331,18 +327,11 @@ fun ChangePasswordDialog(auth: FirebaseAuth, onDismiss: () -> Unit) {
                             Icon(if (newVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null, tint = GrayLight)
                         }
                     },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = Accent,
-                        unfocusedBorderColor = CardBorder,
-                        focusedTextColor     = White,
-                        unfocusedTextColor   = White,
-                        cursorColor          = Accent
-                    ),
+                    colors   = OutlinedTextFieldDefaults.colors(focusedBorderColor = Accent, unfocusedBorderColor = CardBorder, focusedTextColor = White, unfocusedTextColor = White, cursorColor = Accent),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(12.dp))
 
-                // Confirmer nouveau mot de passe
                 OutlinedTextField(
                     value         = confirmPassword,
                     onValueChange = { confirmPassword = it; errorMsg = "" },
@@ -355,13 +344,7 @@ fun ChangePasswordDialog(auth: FirebaseAuth, onDismiss: () -> Unit) {
                             Icon(if (confirmVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null, tint = GrayLight)
                         }
                     },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = Accent,
-                        unfocusedBorderColor = CardBorder,
-                        focusedTextColor     = White,
-                        unfocusedTextColor   = White,
-                        cursorColor          = Accent
-                    ),
+                    colors   = OutlinedTextFieldDefaults.colors(focusedBorderColor = Accent, unfocusedBorderColor = CardBorder, focusedTextColor = White, unfocusedTextColor = White, cursorColor = Accent),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -376,31 +359,22 @@ fun ChangePasswordDialog(auth: FirebaseAuth, onDismiss: () -> Unit) {
 
                 Spacer(Modifier.height(20.dp))
 
-
                 Button(
                     onClick = {
                         when {
-                            oldPassword.isBlank() -> errorMsg = "Entrez votre mot de passe actuel"
-                            newPassword.length < 6 -> errorMsg = "Le nouveau mot de passe doit faire au moins 6 caractères"
+                            oldPassword.isBlank()          -> errorMsg = "Entrez votre mot de passe actuel"
+                            newPassword.length < 6         -> errorMsg = "Le nouveau mot de passe doit faire au moins 6 caractères"
                             newPassword != confirmPassword -> errorMsg = "Les mots de passe ne correspondent pas"
                             else -> {
                                 isLoading = true
-                                val user = auth.currentUser
-                                val email = user?.email ?: ""
+                                val user       = auth.currentUser
+                                val email      = user?.email ?: ""
                                 val credential = EmailAuthProvider.getCredential(email, oldPassword)
                                 user?.reauthenticate(credential)?.addOnSuccessListener {
-                                    user.updatePassword(newPassword).addOnSuccessListener {
-                                        isLoading = false
-                                        successMsg = "Mot de passe modifié ✓"
-                                        errorMsg = ""
-                                    }.addOnFailureListener {
-                                        isLoading = false
-                                        errorMsg = "Erreur lors de la modification"
-                                    }
-                                }?.addOnFailureListener {
-                                    isLoading = false
-                                    errorMsg = "Mot de passe actuel incorrect"
-                                }
+                                    user.updatePassword(newPassword)
+                                        .addOnSuccessListener { isLoading = false; successMsg = "Mot de passe modifié ✓"; errorMsg = "" }
+                                        .addOnFailureListener { isLoading = false; errorMsg = "Erreur lors de la modification" }
+                                }?.addOnFailureListener { isLoading = false; errorMsg = "Mot de passe actuel incorrect" }
                             }
                         }
                     },
@@ -409,11 +383,8 @@ fun ChangePasswordDialog(auth: FirebaseAuth, onDismiss: () -> Unit) {
                     colors   = ButtonDefaults.buttonColors(containerColor = Accent),
                     shape    = RoundedCornerShape(10.dp)
                 ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(color = White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                    } else {
-                        Text("Modifier", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = White)
-                    }
+                    if (isLoading) CircularProgressIndicator(color = White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    else Text("Modifier", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = White)
                 }
             }
         }
@@ -433,9 +404,7 @@ fun StatusCategoryCard(status: FilmStatus, count: Int, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier
-                .size(48.dp)
-                .background(status.color.copy(alpha = 0.15f), CircleShape),
+            modifier = Modifier.size(48.dp).background(status.color.copy(alpha = 0.15f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(status.icon, null, tint = status.color, modifier = Modifier.size(24.dp))
@@ -443,11 +412,7 @@ fun StatusCategoryCard(status: FilmStatus, count: Int, onClick: () -> Unit) {
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(status.label, color = White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-            Text(
-                "$count film${if (count > 1) "s" else ""}",
-                color = GrayLight,
-                fontSize = 13.sp
-            )
+            Text("$count film${if (count > 1) "s" else ""}", color = GrayLight, fontSize = 13.sp)
         }
         Icon(Icons.Outlined.ChevronRight, null, tint = GrayLight, modifier = Modifier.size(20.dp))
     }
@@ -494,9 +459,7 @@ fun ProfileFilmsScreen(navController: NavHostController, status: FilmStatus) {
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Brush.linearGradient(colors = listOf(GradTop, GradBot)))
+        modifier = Modifier.fillMaxSize().background(Brush.linearGradient(colors = listOf(GradTop, GradBot)))
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
@@ -507,9 +470,7 @@ fun ProfileFilmsScreen(navController: NavHostController, status: FilmStatus) {
                     Icon(Icons.Outlined.ArrowBack, null, tint = White)
                 }
                 Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(status.color.copy(alpha = 0.15f), CircleShape),
+                    modifier = Modifier.size(32.dp).background(status.color.copy(alpha = 0.15f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(status.icon, null, tint = status.color, modifier = Modifier.size(16.dp))
@@ -517,9 +478,7 @@ fun ProfileFilmsScreen(navController: NavHostController, status: FilmStatus) {
                 Spacer(Modifier.width(10.dp))
                 Text(status.label, color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
-
             Spacer(Modifier.height(8.dp))
-
             when {
                 isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Accent, strokeWidth = 2.5.dp, modifier = Modifier.size(32.dp))
@@ -546,7 +505,7 @@ fun AvatarImage(avatar: AvatarOption) {
     androidx.compose.foundation.Image(
         painter            = androidx.compose.ui.res.painterResource(id = avatar.resId),
         contentDescription = avatar.label,
-        contentScale       = androidx.compose.ui.layout.ContentScale.Crop,
+        contentScale       = ContentScale.Crop,
         modifier           = Modifier.fillMaxSize().clip(CircleShape)
     )
 }
@@ -574,10 +533,7 @@ fun AvatarPickerDialog(current: String, onSelect: (String) -> Unit, onDismiss: (
                 Spacer(Modifier.height(16.dp))
 
                 AVATAR_LIST.chunked(4).forEach { row ->
-                    Row(
-                        modifier              = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         row.forEach { av ->
                             val selected = av.id == current
                             Column(
@@ -585,34 +541,17 @@ fun AvatarPickerDialog(current: String, onSelect: (String) -> Unit, onDismiss: (
                                     .weight(1f)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(if (selected) Accent.copy(alpha = 0.2f) else CardBg)
-                                    .border(
-                                        width = if (selected) 2.dp else 1.dp,
-                                        color = if (selected) Accent else CardBorder,
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
+                                    .border(if (selected) 2.dp else 1.dp, if (selected) Accent else CardBorder, RoundedCornerShape(12.dp))
                                     .clickable { onSelect(av.id) }
                                     .padding(vertical = 10.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .background(Accent.copy(alpha = 0.15f), CircleShape)
-                                        .border(1.5.dp, if (selected) Accent else CardBorder, CircleShape)
-                                        .clip(CircleShape),
+                                    modifier = Modifier.size(40.dp).background(Accent.copy(alpha = 0.15f), CircleShape).border(1.5.dp, if (selected) Accent else CardBorder, CircleShape).clip(CircleShape),
                                     contentAlignment = Alignment.Center
-                                ) {
-                                    AvatarImage(avatar = av)
-                                }
+                                ) { AvatarImage(avatar = av) }
                                 Spacer(Modifier.height(5.dp))
-                                Text(
-                                    text       = av.label,
-                                    color      = if (selected) Accent else GrayLight,
-                                    fontSize   = 10.sp,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                    textAlign  = TextAlign.Center,
-                                    maxLines   = 1
-                                )
+                                Text(av.label, color = if (selected) Accent else GrayLight, fontSize = 10.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, textAlign = TextAlign.Center, maxLines = 1)
                             }
                         }
                         repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -661,6 +600,10 @@ fun FilmCard(entry: UserFilmEntry, onRemove: () -> Unit) {
             dismissButton = { TextButton(onClick = { showConfirm = false }) { Text("Annuler", color = GrayLight) } }
         )
     }
+
+    var posterUrl by remember(entry.filmId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(entry.filmId) { posterUrl = fetchPoster(entry.title) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -670,30 +613,32 @@ fun FilmCard(entry: UserFilmEntry, onRemove: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Box(
+            modifier = Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)).background(CardBg),
+            contentAlignment = Alignment.Center
         ) {
-            entry.statuses.forEach { s ->
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .background(s.color.copy(alpha = 0.15f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(s.icon, null, tint = s.color, modifier = Modifier.size(14.dp))
-                }
+            if (posterUrl != null) {
+                AsyncImage(model = posterUrl, contentDescription = entry.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            } else {
+                Icon(Icons.Outlined.Movie, null, tint = GrayLight, modifier = Modifier.size(24.dp))
             }
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(entry.title, color = White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(2.dp))
-            Text(
-                entry.statuses.joinToString(" · ") { it.label },
-                color = GrayLight,
-                fontSize = 13.sp
-            )
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                entry.statuses.forEach { s ->
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(s.color.copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(s.icon, null, tint = s.color, modifier = Modifier.size(13.dp))
+                    }
+                }
+            }
         }
         IconButton(onClick = { showConfirm = true }, modifier = Modifier.size(32.dp)) {
             Icon(Icons.Outlined.Close, null, tint = GrayLight, modifier = Modifier.size(16.dp))
