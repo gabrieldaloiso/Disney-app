@@ -251,14 +251,16 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
             }
         }
 
-        // ── Boutons collection en cercle ──────────────────────────────────────
+        // ── Boutons collection alignés ────────────────────────────────────────
         Spacer(modifier = Modifier.height(32.dp))
-        Box(modifier = Modifier.size(200.dp)) {
-            val statuses = FilmStatus.values()
-            StatusCircleButton(statuses[0], currentStatus == statuses[0], Modifier.align(Alignment.TopCenter))    { saveStatus(statuses[0]) }
-            StatusCircleButton(statuses[1], currentStatus == statuses[1], Modifier.align(Alignment.CenterEnd))    { saveStatus(statuses[1]) }
-            StatusCircleButton(statuses[2], currentStatus == statuses[2], Modifier.align(Alignment.BottomCenter)) { saveStatus(statuses[2]) }
-            StatusCircleButton(statuses[3], currentStatus == statuses[3], Modifier.align(Alignment.CenterStart))  { saveStatus(statuses[3]) }
+        Row(
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        ) {
+            FilmStatus.values().forEach { status ->
+                StatusCircleButton(status, currentStatus == status) { saveStatus(status) }
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
