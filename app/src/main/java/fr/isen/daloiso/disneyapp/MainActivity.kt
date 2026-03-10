@@ -65,6 +65,7 @@ import com.google.gson.reflect.TypeToken
 import fr.isen.daloiso.disneyapp.Screens.FilmDetailScreen
 import fr.isen.daloiso.disneyapp.Screens.LoginScreen
 import fr.isen.daloiso.disneyapp.Screens.ProfileScreen
+import fr.isen.daloiso.disneyapp.Screens.SearchScreen
 import fr.isen.daloiso.disneyapp.Screens.SignupScreen
 import fr.isen.daloiso.disneyapp.ui.theme.DisneyTheme
 
@@ -126,7 +127,7 @@ class MainActivity : ComponentActivity() {
                             composable("login")       { LoginScreen(navController = navController) }
                             composable("home")        { HomeScreen(navController = navController) }
                             composable("profile")     { ProfileScreen(navController = navController) }
-                            composable("search") { SearchScreen(navController = navController) }
+                            composable("search")      { SearchScreen(navController = navController) }
                             // ── 2. Route film_detail ajoutée ─────────────────
                             composable("film_detail") {
                                 FilmSelection.selectedFilm?.let { film ->

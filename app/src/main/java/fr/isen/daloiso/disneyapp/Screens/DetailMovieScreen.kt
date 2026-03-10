@@ -1,6 +1,8 @@
 package fr.isen.daloiso.disneyapp.Screens
 
 import Film
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -21,28 +27,79 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.URL
+import java.net.URLEncoder
 
 // ── Couleurs ──────────────────────────────────────────────────────────────────
-private val AccentPurple  = Color(0xFF6650A4)
+private val Accent        = Color(0xFF1DADC0)
 private val CardBg        = Color(0xFF1E3A45)
+private val CardBgDeep    = Color(0xFF122533)
 private val TextPrimary   = Color.White
 private val TextSecondary = Color(0xFFB0C8D0)
 private val Light         = Color(0xFFF5F5F5)
 private val Divider       = Color(0xFF1A5C6E)
 
+private const val TMDB_API_KEY   = "37b0694785cebb5ccca028e53f38e0cb"
+private const val TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/w500"
+
+// ── Récupération de l'affiche via TMDB ────────────────────────────────────────
+suspend fun fetchPosterUrl(titre: String, annee: Int?): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val query = URLEncoder.encode(titre, "UTF-8")
+            val yearParam = if (annee != null) "&year=$annee" else ""
+            val url = "https://api.themoviedb.org/3/search/movie?api_key=$TMDB_API_KEY&query=$query$yearParam&language=fr-FR"
+            val response = URL(url).readText()
+            val json = JSONObject(response)
+            val results = json.getJSONArray("results")
+            if (results.length() > 0) {
+                val posterPath = results.getJSONObject(0).optString("poster_path", "")
+                if (posterPath.isNotEmpty()) "$TMDB_IMAGE_URL$posterPath" else null
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+
 // ── Écran détail film ─────────────────────────────────────────────────────────
 @Composable
 fun FilmDetailScreen(navController: NavHostController, film: Film) {
-    Column(modifier = Modifier.fillMaxSize()) {
+    var posterUrl by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(film.titre) {
+        posterUrl = fetchPosterUrl(film.titre, film.annee)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
 
         // ── Header ────────────────────────────────────────────────────────────
         Row(
@@ -60,48 +117,77 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
             }
             Text(
                 text = "Détail du film",
-                fontSize = 18.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextSecondary
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // ── Icône + Titre ─────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Movie,
-                contentDescription = null,
-                tint = AccentPurple,
-                modifier = Modifier.size(56.dp)
-            )
-            Column(modifier = Modifier.padding(start = 16.dp)) {
-                Text(
-                    text = film.titre,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-                film.genre?.let {
-                    Text(
-                        text = it,
-                        fontSize = 13.sp,
-                        fontStyle = FontStyle.Italic,
-                        color = AccentPurple
+        if (posterUrl != null) {
+            AsyncImage(
+                model = posterUrl,
+                contentDescription = film.titre,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .width(250.dp)
+                    .height(350.dp)
+                    .shadow(
+                        elevation = 24.dp,
+                        shape = RoundedCornerShape(24.dp),
+                        ambientColor = Accent.copy(alpha = 0.4f),
+                        spotColor = Accent.copy(alpha = 0.6f)
                     )
-                }
+                    .clip(RoundedCornerShape(24.dp))
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .width(200.dp)
+                    .height(300.dp)
+                    .shadow(16.dp, RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(CardBgDeep),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Movie,
+                    contentDescription = null,
+                    tint = Accent.copy(alpha = 0.4f),
+                    modifier = Modifier.size(64.dp)
+                )
             }
         }
 
-        // ── Carte infos ───────────────────────────────────────────────────────
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Text(
+            text = film.titre,
+            fontSize = 36.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary,
+            textAlign = TextAlign.Center,
+            lineHeight = 30.sp,
+            modifier = Modifier.padding(horizontal = 24.dp)
+        )
+
+        film.genre?.let {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = it,
+                fontSize = 22.sp,
+                fontStyle = FontStyle.Italic,
+                color = Accent,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Card(
             colors = CardDefaults.cardColors(containerColor = CardBg),
+            shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
@@ -125,7 +211,7 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
                 if (film.annee == null && film.genre == null) {
                     Text(
                         text = "Aucune information disponible.",
-                        fontSize = 14.sp,
+                        fontSize = 20.sp,
                         fontStyle = FontStyle.Italic,
                         color = TextSecondary
                     )
@@ -145,19 +231,19 @@ fun InfoRow(icon: ImageVector, label: String, value: String) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = AccentPurple,
+            tint = Accent,
             modifier = Modifier.size(20.dp)
         )
         Text(
             text = "  $label",
-            fontSize = 13.sp,
+            fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold,
             color = TextSecondary,
             modifier = Modifier.weight(1f)
         )
         Text(
             text = value,
-            fontSize = 14.sp,
+            fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = Light
         )
