@@ -59,7 +59,7 @@ val AVATAR_LIST = listOf(
 data class UserFilmEntry(
     val filmId: String = "",
     val title: String = "",
-    val status: FilmStatus = FilmStatus.WATCHED
+    val statuses: Set<FilmStatus> = emptySet()
 )
 
 enum class FilmStatus(val label: String, val icon: ImageVector, val color: Color) {
@@ -92,11 +92,20 @@ fun ProfileScreen(navController: NavHostController?) {
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 filmEntries = snapshot.children.mapNotNull { child ->
-                    val filmId    = child.key ?: return@mapNotNull null
-                    val title     = child.child("title").getValue(String::class.java) ?: ""
-                    val statusStr = child.child("status").getValue(String::class.java) ?: ""
-                    val status    = FilmStatus.values().find { it.name == statusStr } ?: FilmStatus.WATCHED
-                    UserFilmEntry(filmId, title, status)
+                    val filmId = child.key ?: return@mapNotNull null
+                    val title  = child.child("title").getValue(String::class.java) ?: ""
+                    val statusesNode = child.child("statuses")
+                    val statuses: Set<FilmStatus> = if (statusesNode.exists()) {
+                        FilmStatus.values().filter {
+                            statusesNode.child(it.name).getValue(Boolean::class.java) == true
+                        }.toSet()
+                    } else {
+                        val statusStr = child.child("status").getValue(String::class.java) ?: ""
+                        val s = FilmStatus.values().find { it.name == statusStr }
+                        if (s != null) setOf(s) else emptySet()
+                    }
+                    if (statuses.isEmpty()) return@mapNotNull null
+                    UserFilmEntry(filmId, title, statuses)
                 }
             }
             override fun onCancelled(error: DatabaseError) {}
@@ -203,7 +212,7 @@ fun ProfileScreen(navController: NavHostController?) {
 
             // ── Carte par statut ──────────────────────────────────────────────
             items(FilmStatus.values()) { status ->
-                val count = filmEntries.count { it.status == status }
+                val count = filmEntries.count { it.statuses.contains(status) }
                 StatusCategoryCard(
                     status = status,
                     count  = count,
@@ -276,12 +285,20 @@ fun ProfileFilmsScreen(navController: NavHostController, status: FilmStatus) {
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 filmEntries = snapshot.children.mapNotNull { child ->
-                    val filmId    = child.key ?: return@mapNotNull null
-                    val title     = child.child("title").getValue(String::class.java) ?: ""
-                    val statusStr = child.child("status").getValue(String::class.java) ?: ""
-                    val s         = FilmStatus.values().find { it.name == statusStr } ?: return@mapNotNull null
-                    if (s != status) return@mapNotNull null
-                    UserFilmEntry(filmId, title, s)
+                    val filmId = child.key ?: return@mapNotNull null
+                    val title  = child.child("title").getValue(String::class.java) ?: ""
+                    val statusesNode = child.child("statuses")
+                    val statuses: Set<FilmStatus> = if (statusesNode.exists()) {
+                        FilmStatus.values().filter {
+                            statusesNode.child(it.name).getValue(Boolean::class.java) == true
+                        }.toSet()
+                    } else {
+                        val statusStr = child.child("status").getValue(String::class.java) ?: ""
+                        val s = FilmStatus.values().find { it.name == statusStr }
+                        if (s != null) setOf(s) else emptySet()
+                    }
+                    if (!statuses.contains(status)) return@mapNotNull null
+                    UserFilmEntry(filmId, title, statuses)
                 }
                 isLoading = false
             }
@@ -474,17 +491,31 @@ fun FilmCard(entry: UserFilmEntry, onRemove: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier.size(46.dp).background(entry.status.color.copy(alpha = 0.15f), CircleShape),
-            contentAlignment = Alignment.Center
+        // Colonne de petites icônes pour chaque statut actif
+        Column(
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(entry.status.icon, null, tint = entry.status.color, modifier = Modifier.size(22.dp))
+            entry.statuses.forEach { s ->
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(s.color.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(s.icon, null, tint = s.color, modifier = Modifier.size(14.dp))
+                }
+            }
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(entry.title, color = White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(2.dp))
-            Text(entry.status.label, color = entry.status.color, fontSize = 13.sp)
+            Text(
+                entry.statuses.joinToString(" · ") { it.label },
+                color = GrayLight,
+                fontSize = 13.sp
+            )
         }
         IconButton(onClick = { showConfirm = true }, modifier = Modifier.size(32.dp)) {
             Icon(Icons.Outlined.Close, null, tint = GrayLight, modifier = Modifier.size(16.dp))

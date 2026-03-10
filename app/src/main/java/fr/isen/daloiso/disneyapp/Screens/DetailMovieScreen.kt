@@ -89,6 +89,15 @@ suspend fun fetchPosterUrl(titre: String, annee: Int?): String? {
     }
 }
 
+// ── Règles d'incompatibilité de statuts ───────────────────────────────────────
+fun incompatibleWith(status: FilmStatus): Set<FilmStatus> = when (status) {
+    FilmStatus.WATCHED       -> setOf(FilmStatus.WANT_TO_WATCH)
+    FilmStatus.WANT_TO_WATCH -> setOf(FilmStatus.WATCHED)
+    FilmStatus.OWNED         -> setOf(FilmStatus.WANT_TO_SELL, FilmStatus.POSSESSED)
+    FilmStatus.WANT_TO_SELL  -> setOf(FilmStatus.OWNED, FilmStatus.POSSESSED)
+    FilmStatus.POSSESSED     -> setOf(FilmStatus.OWNED, FilmStatus.WANT_TO_SELL)
+}
+
 // ── Écran détail film ─────────────────────────────────────────────────────────
 @Composable
 fun FilmDetailScreen(navController: NavHostController, film: Film) {
@@ -96,7 +105,7 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
 
     val uid    = FirebaseAuth.getInstance().currentUser?.uid
     val filmId = film.titre.replace(Regex("[^A-Za-z0-9]"), "_")
-    var currentStatus by remember { mutableStateOf<FilmStatus?>(null) }
+    var currentStatuses by remember { mutableStateOf<Set<FilmStatus>>(emptySet()) }
 
     LaunchedEffect(film.titre) {
         posterUrl = fetchPosterUrl(film.titre, film.annee)
@@ -105,23 +114,52 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
     LaunchedEffect(filmId, uid) {
         uid ?: return@LaunchedEffect
         FirebaseDatabase.getInstance()
-            .getReference("users/$uid/films/$filmId/status")
+            .getReference("users/$uid/films/$filmId")
             .get()
             .addOnSuccessListener { snap ->
-                val statusStr = snap.getValue(String::class.java)
-                currentStatus = FilmStatus.values().find { it.name == statusStr }
+                val statusesNode = snap.child("statuses")
+                currentStatuses = if (statusesNode.exists()) {
+                    FilmStatus.values().filter {
+                        statusesNode.child(it.name).getValue(Boolean::class.java) == true
+                    }.toSet()
+                } else {
+                    val s = FilmStatus.values().find { it.name == snap.child("status").getValue(String::class.java) }
+                    if (s != null) setOf(s) else emptySet()
+                }
             }
     }
 
-    fun saveStatus(status: FilmStatus) {
+    fun toggleStatus(status: FilmStatus) {
         uid ?: return
-        val ref = FirebaseDatabase.getInstance().getReference("users/$uid/films/$filmId")
-        if (currentStatus == status) {
-            ref.removeValue()
-            currentStatus = null
+        val userEmail = FirebaseAuth.getInstance().currentUser?.email ?: ""
+        val db        = FirebaseDatabase.getInstance()
+        val filmRef   = db.getReference("users/$uid/films/$filmId")
+        val marketRef = db.getReference("market/$filmId")
+
+        val newStatuses = if (status in currentStatuses) {
+            currentStatuses - status
         } else {
-            ref.setValue(mapOf("title" to film.titre, "status" to status.name))
-            currentStatus = status
+            (currentStatuses - incompatibleWith(status)) + status
+        }
+        currentStatuses = newStatuses
+
+        if (newStatuses.isEmpty()) {
+            filmRef.removeValue()
+        } else {
+            filmRef.child("title").setValue(film.titre)
+            val statusesMap = FilmStatus.values().associate { it.name to (it in newStatuses) }
+            filmRef.child("statuses").setValue(statusesMap)
+        }
+
+        // Mettre à jour l'index marché
+        marketRef.child("sellers/$uid").removeValue()
+        marketRef.child("seekers/$uid").removeValue()
+        if (newStatuses.isNotEmpty()) {
+            marketRef.child("title").setValue(film.titre)
+            if (FilmStatus.WANT_TO_SELL in newStatuses)
+                marketRef.child("sellers/$uid").setValue(mapOf("email" to userEmail))
+            if (FilmStatus.OWNED in newStatuses)
+                marketRef.child("seekers/$uid").setValue(mapOf("email" to userEmail))
         }
     }
 
@@ -259,7 +297,7 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
             FilmStatus.values().forEach { status ->
-                StatusCircleButton(status, currentStatus == status) { saveStatus(status) }
+                StatusCircleButton(status, status in currentStatuses) { toggleStatus(status) }
             }
         }
 

@@ -79,12 +79,12 @@ fun MarketScreen(navController: NavHostController) {
         val myFilmsRef = db.getReference("users/$uid/films")
         val myFilmsListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                mySeekingIds   = snapshot.children
-                    .filter { it.child("status").getValue(String::class.java) == FilmStatus.OWNED.name }
-                    .mapNotNull { it.key }.toSet()
-                myPossessedIds = snapshot.children
-                    .filter { it.child("status").getValue(String::class.java) == FilmStatus.POSSESSED.name }
-                    .mapNotNull { it.key }.toSet()
+                mySeekingIds = snapshot.children.filter {
+                    it.child("statuses").child(FilmStatus.OWNED.name).getValue(Boolean::class.java) == true
+                }.mapNotNull { it.key }.toSet()
+                myPossessedIds = snapshot.children.filter {
+                    it.child("statuses").child(FilmStatus.POSSESSED.name).getValue(Boolean::class.java) == true
+                }.mapNotNull { it.key }.toSet()
             }
             override fun onCancelled(error: DatabaseError) {}
         }
@@ -98,12 +98,39 @@ fun MarketScreen(navController: NavHostController) {
 
     fun claimOffer(offer: MarketOffer) {
         val db = FirebaseDatabase.getInstance()
-        // Acheteur → Je possède
-        db.getReference("users/$uid/films/${offer.filmId}").setValue(
-            mapOf("title" to offer.filmTitle, "status" to FilmStatus.POSSESSED.name)
-        )
-        // Vendeur → retirer de À céder
-        db.getReference("users/${offer.sellerUid}/films/${offer.filmId}").removeValue()
+        val buyerFilmRef = db.getReference("users/$uid/films/${offer.filmId}")
+
+        // Acheteur : lire les statuts existants puis ajouter POSSESSED
+        buyerFilmRef.get().addOnSuccessListener { snap ->
+            val existingStatuses = FilmStatus.values().filter {
+                snap.child("statuses").child(it.name).getValue(Boolean::class.java) == true
+            }.toMutableSet()
+
+            // Ajouter POSSESSED, retirer les incompatibles
+            existingStatuses.removeAll(incompatibleWith(FilmStatus.POSSESSED))
+            existingStatuses.add(FilmStatus.POSSESSED)
+
+            val statusesMap = FilmStatus.values().associate { it.name to (it in existingStatuses) }
+            buyerFilmRef.child("title").setValue(offer.filmTitle)
+            buyerFilmRef.child("statuses").setValue(statusesMap)
+        }
+
+        // Vendeur → retirer WANT_TO_SELL de ses statuts
+        val sellerFilmRef = db.getReference("users/${offer.sellerUid}/films/${offer.filmId}")
+        sellerFilmRef.get().addOnSuccessListener { snap ->
+            val sellerStatuses = FilmStatus.values().filter {
+                snap.child("statuses").child(it.name).getValue(Boolean::class.java) == true
+            }.toMutableSet()
+            sellerStatuses.remove(FilmStatus.WANT_TO_SELL)
+
+            if (sellerStatuses.isEmpty()) {
+                sellerFilmRef.removeValue()
+            } else {
+                val statusesMap = FilmStatus.values().associate { it.name to (it in sellerStatuses) }
+                sellerFilmRef.child("statuses").setValue(statusesMap)
+            }
+        }
+
         // Nettoyer l'index marché
         db.getReference("market/${offer.filmId}/sellers/${offer.sellerUid}").removeValue()
         db.getReference("market/${offer.filmId}/seekers/$uid").removeValue()
