@@ -65,9 +65,9 @@ data class UserFilmEntry(
 enum class FilmStatus(val label: String, val icon: ImageVector, val color: Color) {
     WATCHED(      "Vu",          Icons.Outlined.Visibility,   Accent),
     WANT_TO_WATCH("À voir",      Icons.Outlined.Bookmark,     Color(0xFF9B59B6)),
-    OWNED(        "Je recherche",Icons.Outlined.Search,        Color(0xFF27AE60)),
-    WANT_TO_SELL( "À céder",     Icons.Outlined.Sell,         Color(0xFFE67E22)),
-    POSSESSED(    "Je possède",  Icons.Outlined.CheckCircle,  Color(0xFF1ABC9C))
+    OWNED(        "Je recherche ce bluray",     Icons.Outlined.Search,       Color(0xFF27AE60)),
+    WANT_TO_SELL( "Je veux céder ce bluray",   Icons.Outlined.Sell,         Color(0xFFE67E22)),
+    POSSESSED(    "Je possède ce bluray",      Icons.Outlined.CheckCircle,  Color(0xFF1ABC9C))
 }
 
 @Composable
