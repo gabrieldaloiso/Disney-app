@@ -188,7 +188,7 @@ fun LoginScreen(navController: NavHostController) {
                         text = annotatedString,
                         onClick = { offset ->
                             annotatedString.getStringAnnotations(offset, offset)
-                                .firstOrNull()?.let { navController.navigate("signup") }
+                                .firstOrNull()?.let { navController.navigate("register") }
                         }
                     )
                 }
