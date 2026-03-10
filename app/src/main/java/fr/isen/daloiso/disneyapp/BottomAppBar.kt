@@ -3,11 +3,12 @@ package fr.isen.daloiso.disneyapp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
@@ -20,7 +21,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavController
 
-// ── Data class ────────────────────────────────────────────────────────────────
 data class BottomNavItem(
     val title: String,
     val route: String,
@@ -28,56 +28,45 @@ data class BottomNavItem(
     val unselectedIcon: ImageVector
 )
 
-// ── Items de navigation (à adapter selon tes routes) ─────────────────────────
 val bottomNavItems = listOf(
-    BottomNavItem(
-        title = "Accueil",
-        route = "home",
-        selectedIcon = Icons.Filled.Home,
-        unselectedIcon = Icons.Outlined.Home
-    ),
-    BottomNavItem(
-        title = "Profil",
-        route = "profile",
-        selectedIcon = Icons.Filled.Person,
-        unselectedIcon = Icons.Outlined.Person
-    )
+    BottomNavItem("Accueil",   "home",    Icons.Filled.Home,   Icons.Outlined.Home),
+    BottomNavItem("Recherche", "search",  Icons.Filled.Search, Icons.Outlined.Search),
+    BottomNavItem("Profil",    "profile", Icons.Filled.Person, Icons.Outlined.Person)
 )
 
-// ── Composables ───────────────────────────────────────────────────────────────
 @Composable
 fun BottomAppBar(items: List<BottomNavItem>, navController: NavController) {
     var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
 
     NavigationBar(
         containerColor = Color(0xFF071220),
-        contentColor = Color.White
+        contentColor   = Color.White
     ) {
         items.forEachIndexed { index, item ->
             NavigationBarItem(
                 selected = selectedTabIndex == index,
-                onClick = {
+                onClick  = {
                     selectedTabIndex = index
                     navController.navigate(item.route)
                 },
                 icon = {
                     TabBarIcon(
-                        isSelected = selectedTabIndex == index,
-                        selectedIcon = item.selectedIcon,
+                        isSelected     = selectedTabIndex == index,
+                        selectedIcon   = item.selectedIcon,
                         unselectedIcon = item.unselectedIcon,
-                        title = item.title
+                        title          = item.title
                     )
                 },
-                label = {
+                label  = {
                     Text(
-                        text = item.title,
+                        text  = item.title,
                         color = if (selectedTabIndex == index) Color(0xFF1DADC0) else Color(0xFFB0C8D0)
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color(0xFF1DADC0),
+                    selectedIconColor   = Color(0xFF1DADC0),
                     unselectedIconColor = Color(0xFFB0C8D0),
-                    indicatorColor = Color(0xFF1E3A45)
+                    indicatorColor      = Color(0xFF1E3A45)
                 )
             )
         }
@@ -92,7 +81,7 @@ fun TabBarIcon(
     title: String
 ) {
     Icon(
-        imageVector = if (isSelected) selectedIcon else unselectedIcon,
+        imageVector        = if (isSelected) selectedIcon else unselectedIcon,
         contentDescription = title
     )
 }

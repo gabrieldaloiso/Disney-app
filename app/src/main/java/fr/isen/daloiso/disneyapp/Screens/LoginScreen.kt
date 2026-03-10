@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -72,7 +74,7 @@ fun LoginScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .padding(28.dp)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                 Image(
                     painter = painterResource(id = R.drawable.disneymoins),
                     contentDescription = "Disney Logo",
@@ -80,13 +82,6 @@ fun LoginScreen(navController: NavHostController) {
                         .fillMaxWidth()
                         .height(80.dp)
                         .padding(top = 16.dp, bottom = 8.dp)
-                )
-                Text(
-                    text = "Welcome Back!",
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp),
-                    style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Normal, fontStyle = FontStyle.Normal),
-                    color = Color.White,
-                    textAlign = TextAlign.Center
                 )
                 Text(
                     text = "Login to your account",
@@ -188,7 +183,7 @@ fun LoginScreen(navController: NavHostController) {
                         text = annotatedString,
                         onClick = { offset ->
                             annotatedString.getStringAnnotations(offset, offset)
-                                .firstOrNull()?.let { navController.navigate("signup") }
+                                .firstOrNull()?.let { navController.navigate("register") }
                         }
                     )
                 }
