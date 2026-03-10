@@ -168,7 +168,7 @@ fun SearchScreen(navController: NavHostController?) {
                         onValueChange = { query = it },
                         placeholder   = {
                             Text(
-                                "Ex: Lion King, Marvel, Star Wars...",
+                                "Ex: Marvel, Star Wars...",
                                 color    = TextDark.copy(alpha = 0.4f),
                                 fontSize = 15.sp
                             )
