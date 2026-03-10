@@ -11,7 +11,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,10 +25,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -44,8 +45,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -61,6 +62,7 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import fr.isen.daloiso.disneyapp.Screens.FilmDetailScreen
 import fr.isen.daloiso.disneyapp.Screens.LoginScreen
 import fr.isen.daloiso.disneyapp.Screens.ProfileScreen
 import fr.isen.daloiso.disneyapp.Screens.SignupScreen
@@ -73,8 +75,15 @@ private val CardBg        = Color(0xFF1E3A45)
 private val CardBgDeep    = Color(0xFF122533)
 private val TextPrimary   = Color.White
 private val TextSecondary = Color(0xFFB0C8D0)
+private val AccentPurple  = Color(0xFF6650A4)
 
-private val screensWithoutBottomBar = listOf("register", "login")
+// ── 1. "film_detail" ajouté ───────────────────────────────────────────────────
+private val screensWithoutBottomBar = listOf("register", "login", "film_detail")
+
+// ── Singleton film sélectionné ────────────────────────────────────────────────
+object FilmSelection {
+    var selectedFilm: Film? = null
+}
 
 // ── Activity ──────────────────────────────────────────────────────────────────
 class MainActivity : ComponentActivity() {
@@ -91,7 +100,8 @@ class MainActivity : ComponentActivity() {
 
                 val bottomItems = listOf(
                     BottomNavItem("Accueil", "home",    Icons.Filled.Home,   Icons.Outlined.Home),
-                    BottomNavItem("Profil",  "profile", Icons.Filled.Person, Icons.Outlined.Person)
+                    BottomNavItem("Profil",  "profile", Icons.Filled.Person, Icons.Outlined.Person) ,
+                    BottomNavItem("Recherche", "search",  Icons.Filled.Search, Icons.Outlined.Search)
                 )
 
                 Box(
@@ -112,10 +122,17 @@ class MainActivity : ComponentActivity() {
                             startDestination = startDestination,
                             modifier = Modifier.padding(innerPadding)
                         ) {
-                            composable("register") { SignupScreen(navController = navController) }
-                            composable("login")    { LoginScreen(navController = navController) }
-                            composable("home")     { HomeScreen(navController = navController) }
-                            composable("profile")  { ProfileScreen(navController = navController) }
+                            composable("register")    { SignupScreen(navController = navController) }
+                            composable("login")       { LoginScreen(navController = navController) }
+                            composable("home")        { HomeScreen(navController = navController) }
+                            composable("profile")     { ProfileScreen(navController = navController) }
+                            composable("search") { SearchScreen(navController = navController) }
+                            // ── 2. Route film_detail ajoutée ─────────────────
+                            composable("film_detail") {
+                                FilmSelection.selectedFilm?.let { film ->
+                                    FilmDetailScreen(navController = navController, film = film)
+                                }
+                            }
                         }
                     }
                 }
@@ -153,7 +170,8 @@ fun HomeScreen(navController: NavHostController) {
                     onToggle = {
                         if (isExpanded) expandableCategories.removeAll { it.categorie == categorie.categorie }
                         else expandableCategories.add(categorie)
-                    }
+                    },
+                    navController = navController
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -163,7 +181,12 @@ fun HomeScreen(navController: NavHostController) {
 
 // ── Catégorie ─────────────────────────────────────────────────────────────────
 @Composable
-fun CategoryCard(categorie: Categorie, isExpanded: Boolean, onToggle: () -> Unit) {
+fun CategoryCard(
+    categorie: Categorie,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    navController: NavHostController
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = CardBg),
         modifier = Modifier.fillMaxWidth()
@@ -190,7 +213,7 @@ fun CategoryCard(categorie: Categorie, isExpanded: Boolean, onToggle: () -> Unit
                 )
             }
             if (isExpanded) {
-                FranchiseList(franchises = categorie.franchises)
+                FranchiseList(franchises = categorie.franchises, navController = navController)
             }
         }
     }
@@ -198,7 +221,7 @@ fun CategoryCard(categorie: Categorie, isExpanded: Boolean, onToggle: () -> Unit
 
 // ── Franchises ────────────────────────────────────────────────────────────────
 @Composable
-fun FranchiseList(franchises: List<Franchise>) {
+fun FranchiseList(franchises: List<Franchise>, navController: NavHostController) {
     val expandableFranchises = remember { mutableStateListOf<Franchise>() }
 
     Column(
@@ -234,7 +257,7 @@ fun FranchiseList(franchises: List<Franchise>) {
             }
             if (isExpanded) {
                 val sagas = franchise.sousSagas
-                if (sagas != null) SagaList(sagas) else FilmList(franchise.tousLesFilms())
+                if (sagas != null) SagaList(sagas, navController) else FilmList(franchise.tousLesFilms(), navController)
             }
         }
     }
@@ -242,7 +265,7 @@ fun FranchiseList(franchises: List<Franchise>) {
 
 // ── Sous-sagas ────────────────────────────────────────────────────────────────
 @Composable
-fun SagaList(sousSagas: List<SousSaga>) {
+fun SagaList(sousSagas: List<SousSaga>, navController: NavHostController) {
     val expandableSaga = remember { mutableStateListOf<SousSaga>() }
 
     Column(modifier = Modifier.padding(start = 16.dp)) {
@@ -272,27 +295,32 @@ fun SagaList(sousSagas: List<SousSaga>) {
                 )
             }
             if (isExpanded) {
-                FilmList(saga.films)
+                FilmList(saga.films, navController)
             }
         }
     }
 }
 
 // ── Films ─────────────────────────────────────────────────────────────────────
+// ── 3. navController ajouté + films cliquables ───────────────────────────────
 @Composable
-fun FilmList(films: List<Film>) {
+fun FilmList(films: List<Film>, navController: NavHostController) {
     Column(modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)) {
         films.forEach { film ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable {
+                        FilmSelection.selectedFilm = film
+                        navController.navigate("film_detail")
+                    }
                     .padding(vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "•", color = Light, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
-                Text(text = film.titre, fontSize = 13.sp, color = TextPrimary)
+                Text(text = "•", color = AccentPurple, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
+                Text(text = film.titre, fontSize = 13.sp, color = TextPrimary, modifier = Modifier.weight(1f))
                 film.annee?.let {
-                    Text(text = "  ($it)", fontSize = 12.sp, color = TextSecondary)
+                    Text(text = "($it)", fontSize = 12.sp, color = TextSecondary)
                 }
             }
         }
