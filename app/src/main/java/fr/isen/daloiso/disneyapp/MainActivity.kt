@@ -26,11 +26,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Store
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -63,7 +65,10 @@ import com.google.firebase.database.database
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import fr.isen.daloiso.disneyapp.Screens.FilmDetailScreen
+import fr.isen.daloiso.disneyapp.Screens.FilmStatus
 import fr.isen.daloiso.disneyapp.Screens.LoginScreen
+import fr.isen.daloiso.disneyapp.Screens.MarketScreen
+import fr.isen.daloiso.disneyapp.Screens.ProfileFilmsScreen
 import fr.isen.daloiso.disneyapp.Screens.ProfileScreen
 import fr.isen.daloiso.disneyapp.Screens.SearchScreen
 import fr.isen.daloiso.disneyapp.Screens.SignupScreen
@@ -100,9 +105,10 @@ class MainActivity : ComponentActivity() {
                 val startDestination = if (FirebaseAuth.getInstance().currentUser != null) "home" else "register"
 
                 val bottomItems = listOf(
-                    BottomNavItem("Accueil", "home",    Icons.Filled.Home,   Icons.Outlined.Home),
-                    BottomNavItem("Profil",  "profile", Icons.Filled.Person, Icons.Outlined.Person) ,
-                    BottomNavItem("Recherche", "search",  Icons.Filled.Search, Icons.Outlined.Search)
+                    BottomNavItem("Accueil",   "home",    Icons.Filled.Home,   Icons.Outlined.Home),
+                    BottomNavItem("Marché",    "market",  Icons.Filled.Store,  Icons.Outlined.Store),
+                    BottomNavItem("Recherche", "search",  Icons.Filled.Search, Icons.Outlined.Search),
+                    BottomNavItem("Profil",    "profile", Icons.Filled.Person, Icons.Outlined.Person)
                 )
 
                 Box(
@@ -113,7 +119,9 @@ class MainActivity : ComponentActivity() {
                     Scaffold(
                         containerColor = Color.Transparent,
                         bottomBar = {
-                            if (currentRoute !in screensWithoutBottomBar) {
+                            val hideBar = currentRoute in screensWithoutBottomBar
+                                    || currentRoute?.startsWith("profile_films/") == true
+                            if (!hideBar) {
                                 BottomAppBar(items = bottomItems, navController = navController)
                             }
                         }
@@ -126,8 +134,14 @@ class MainActivity : ComponentActivity() {
                             composable("register")    { SignupScreen(navController = navController) }
                             composable("login")       { LoginScreen(navController = navController) }
                             composable("home")        { HomeScreen(navController = navController) }
+                            composable("market")      { MarketScreen(navController = navController) }
                             composable("profile")     { ProfileScreen(navController = navController) }
                             composable("search")      { SearchScreen(navController = navController) }
+                            composable("profile_films/{statusName}") { backStackEntry ->
+                                val statusName = backStackEntry.arguments?.getString("statusName") ?: return@composable
+                                val status = FilmStatus.values().find { it.name == statusName } ?: return@composable
+                                ProfileFilmsScreen(navController = navController, status = status)
+                            }
                             // ── 2. Route film_detail ajoutée ─────────────────
                             composable("film_detail") {
                                 FilmSelection.selectedFilm?.let { film ->

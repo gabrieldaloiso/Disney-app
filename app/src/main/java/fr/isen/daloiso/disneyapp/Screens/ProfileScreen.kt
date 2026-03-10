@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -62,10 +63,11 @@ data class UserFilmEntry(
 )
 
 enum class FilmStatus(val label: String, val icon: ImageVector, val color: Color) {
-    WATCHED(      "Vu",      Icons.Outlined.Visibility, Accent),
-    WANT_TO_WATCH("À voir",  Icons.Outlined.Bookmark,   Color(0xFF9B59B6)),
-    OWNED(        "Je recherche", Icons.Outlined.Search,     Color(0xFF27AE60)),
-    WANT_TO_SELL( "À céder", Icons.Outlined.Sell,       Color(0xFFE67E22))
+    WATCHED(      "Vu",          Icons.Outlined.Visibility,   Accent),
+    WANT_TO_WATCH("À voir",      Icons.Outlined.Bookmark,     Color(0xFF9B59B6)),
+    OWNED(        "Je recherche",Icons.Outlined.Search,        Color(0xFF27AE60)),
+    WANT_TO_SELL( "À céder",     Icons.Outlined.Sell,         Color(0xFFE67E22)),
+    POSSESSED(    "Je possède",  Icons.Outlined.CheckCircle,  Color(0xFF1ABC9C))
 }
 
 @Composable
@@ -73,19 +75,15 @@ fun ProfileScreen(navController: NavHostController?) {
     val auth = FirebaseAuth.getInstance()
     val user = auth.currentUser
 
-    var displayName      by remember { mutableStateOf(user?.displayName ?: "Utilisateur") }
     var userEmail        by remember { mutableStateOf(user?.email ?: "") }
     var filmEntries      by remember { mutableStateOf<List<UserFilmEntry>>(emptyList()) }
-    var isLoading        by remember { mutableStateOf(true) }
-    var activeFilter     by remember { mutableStateOf<FilmStatus?>(null) }
     var showLogout       by remember { mutableStateOf(false) }
     var showAvatarPicker by remember { mutableStateOf(false) }
     var selectedAvatarId by remember { mutableStateOf("mickey") }
     val uid = user?.uid
 
-    // Firebase
     DisposableEffect(uid) {
-        if (uid == null) { isLoading = false; return@DisposableEffect onDispose {} }
+        if (uid == null) return@DisposableEffect onDispose {}
         val db = FirebaseDatabase.getInstance()
         db.getReference("users/$uid/avatarId").get().addOnSuccessListener { snap ->
             snap.getValue(String::class.java)?.let { selectedAvatarId = it }
@@ -100,9 +98,8 @@ fun ProfileScreen(navController: NavHostController?) {
                     val status    = FilmStatus.values().find { it.name == statusStr } ?: FilmStatus.WATCHED
                     UserFilmEntry(filmId, title, status)
                 }
-                isLoading = false
             }
-            override fun onCancelled(error: DatabaseError) { isLoading = false }
+            override fun onCancelled(error: DatabaseError) {}
         }
         filmsRef.addValueEventListener(listener)
         onDispose { filmsRef.removeEventListener(listener) }
@@ -113,15 +110,9 @@ fun ProfileScreen(navController: NavHostController?) {
         FirebaseDatabase.getInstance().getReference("users/$uid/avatarId").setValue(id)
         selectedAvatarId = id
     }
-    fun removeFilm(entry: UserFilmEntry) {
-        uid ?: return
-        FirebaseDatabase.getInstance().getReference("users/$uid/films/${entry.filmId}").removeValue()
-    }
 
-    val avatar   = AVATAR_LIST.find { it.id == selectedAvatarId } ?: AVATAR_LIST[0]
-    val filtered = if (activeFilter == null) filmEntries else filmEntries.filter { it.status == activeFilter }
+    val avatar = AVATAR_LIST.find { it.id == selectedAvatarId } ?: AVATAR_LIST[0]
 
-    // Dialogs
     if (showAvatarPicker) {
         AvatarPickerDialog(
             current   = selectedAvatarId,
@@ -158,14 +149,12 @@ fun ProfileScreen(navController: NavHostController?) {
             modifier       = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 48.dp)
         ) {
-
+            // ── Header ────────────────────────────────────────────────────────
             item {
                 Column(
-                    modifier            = Modifier.fillMaxWidth().padding(top = 56.dp, bottom = 24.dp),
+                    modifier            = Modifier.fillMaxWidth().padding(top = 56.dp, bottom = 28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-
-                    // Avatar cliquable
                     Box(
                         contentAlignment = Alignment.BottomEnd,
                         modifier = Modifier.clickable(
@@ -181,7 +170,6 @@ fun ProfileScreen(navController: NavHostController?) {
                                 .clip(CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            // Image chargée avec coil si disponible, sinon fallback initiales
                             AvatarImage(avatar = avatar)
                         }
                         Box(
@@ -194,96 +182,34 @@ fun ProfileScreen(navController: NavHostController?) {
                             Icon(Icons.Outlined.Edit, null, tint = White, modifier = Modifier.size(13.dp))
                         }
                     }
-
-                    Spacer(Modifier.height(4.dp))
-                    Text(userEmail, color = Accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-
-
-                    Spacer(Modifier.height(24.dp))
-
-                    // Stats
-                    Row(
-                        modifier              = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        FilmStatus.values().forEach { status ->
-                            val count = filmEntries.count { it.status == status }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Box(
-                                    modifier = Modifier
-                                        .background(CardBg, RoundedCornerShape(10.dp))
-                                        .border(1.dp, CardBorder, RoundedCornerShape(10.dp))
-                                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(count.toString(), color = White, fontSize = 26.sp, fontWeight = FontWeight.Black)
-                                }
-                                Spacer(Modifier.height(4.dp))
-                                Text(status.label, color = GrayLight, fontSize = 13.sp)
-                            }
-                        }
-                    }
-
-
+                    Spacer(Modifier.height(10.dp))
+                    Text(userEmail, color = Accent, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            item {
-                Divider(color = CardBorder, thickness = 1.dp, modifier = Modifier.padding(horizontal = 20.dp))
-                Spacer(Modifier.height(16.dp))
-            }
 
+            // ── Titre section ─────────────────────────────────────────────────
             item {
-                Row(
-                    modifier          = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Ma collection", color = White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.weight(1f))
-                    Text("${filmEntries.size} film${if (filmEntries.size > 1) "s" else ""}", color = GrayLight, fontSize = 15.sp)
-                }
+                HorizontalDivider(color = CardBorder, modifier = Modifier.padding(horizontal = 20.dp))
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    "Ma collection",
+                    color = White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
                 Spacer(Modifier.height(14.dp))
             }
 
-            item {
-                LazyRow(
-                    contentPadding        = PaddingValues(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier              = Modifier.padding(bottom = 16.dp)
-                ) {
-                    item {
-                        FilterPill("Tous", activeFilter == null, Accent) { activeFilter = null }
-                    }
-                    items(FilmStatus.values()) { s ->
-                        FilterPill(s.label, activeFilter == s, s.color, s.icon) {
-                            activeFilter = if (activeFilter == s) null else s
-                        }
-                    }
-                }
+            // ── Carte par statut ──────────────────────────────────────────────
+            items(FilmStatus.values()) { status ->
+                val count = filmEntries.count { it.status == status }
+                StatusCategoryCard(
+                    status = status,
+                    count  = count,
+                    onClick = { navController?.navigate("profile_films/${status.name}") }
+                )
             }
-
-            if (isLoading) {
-                item {
-                    Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Accent, strokeWidth = 2.5.dp, modifier = Modifier.size(32.dp))
-                    }
-                }
-            } else if (filtered.isEmpty()) {
-                item {
-                    Column(
-                        modifier            = Modifier.fillMaxWidth().padding(vertical = 48.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(Icons.Outlined.Movie, null, tint = CardBorder, modifier = Modifier.size(48.dp))
-                        Spacer(Modifier.height(10.dp))
-                        Text("Aucun film dans cette liste", color = GrayLight, fontSize = 14.sp)
-                    }
-                }
-            } else {
-                items(filtered) { entry ->
-                    FilmCard(entry = entry, onRemove = { removeFilm(entry) })
-                }
-            }
-
         }
 
         // ── Bouton déconnexion haut droite ────────────────────────────────────
@@ -299,6 +225,122 @@ fun ProfileScreen(navController: NavHostController?) {
                 tint               = Accent,
                 modifier           = Modifier.size(26.dp)
             )
+        }
+    }
+}
+
+// ── Carte catégorie statut ────────────────────────────────────────────────────
+@Composable
+fun StatusCategoryCard(status: FilmStatus, count: Int, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .background(CardBg, RoundedCornerShape(14.dp))
+            .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
+            .clickable { onClick() }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(status.color.copy(alpha = 0.15f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(status.icon, null, tint = status.color, modifier = Modifier.size(24.dp))
+        }
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(status.label, color = White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            Text(
+                "$count film${if (count > 1) "s" else ""}",
+                color = GrayLight,
+                fontSize = 13.sp
+            )
+        }
+        Icon(Icons.Outlined.ChevronRight, null, tint = GrayLight, modifier = Modifier.size(20.dp))
+    }
+}
+
+// ── Page films par statut ─────────────────────────────────────────────────────
+@Composable
+fun ProfileFilmsScreen(navController: NavHostController, status: FilmStatus) {
+    val uid = FirebaseAuth.getInstance().currentUser?.uid
+    var filmEntries by remember { mutableStateOf<List<UserFilmEntry>>(emptyList()) }
+    var isLoading   by remember { mutableStateOf(true) }
+
+    DisposableEffect(uid) {
+        if (uid == null) { isLoading = false; return@DisposableEffect onDispose {} }
+        val ref = FirebaseDatabase.getInstance().getReference("users/$uid/films")
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                filmEntries = snapshot.children.mapNotNull { child ->
+                    val filmId    = child.key ?: return@mapNotNull null
+                    val title     = child.child("title").getValue(String::class.java) ?: ""
+                    val statusStr = child.child("status").getValue(String::class.java) ?: ""
+                    val s         = FilmStatus.values().find { it.name == statusStr } ?: return@mapNotNull null
+                    if (s != status) return@mapNotNull null
+                    UserFilmEntry(filmId, title, s)
+                }
+                isLoading = false
+            }
+            override fun onCancelled(error: DatabaseError) { isLoading = false }
+        }
+        ref.addValueEventListener(listener)
+        onDispose { ref.removeEventListener(listener) }
+    }
+
+    fun removeFilm(entry: UserFilmEntry) {
+        uid ?: return
+        FirebaseDatabase.getInstance().getReference("users/$uid/films/${entry.filmId}").removeValue()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.linearGradient(colors = listOf(GradTop, GradBot)))
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header
+            Row(
+                modifier          = Modifier.fillMaxWidth().padding(top = 24.dp, start = 8.dp, end = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.Outlined.ArrowBack, null, tint = White)
+                }
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(status.color.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(status.icon, null, tint = status.color, modifier = Modifier.size(16.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(status.label, color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            when {
+                isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Accent, strokeWidth = 2.5.dp, modifier = Modifier.size(32.dp))
+                }
+                filmEntries.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(status.icon, null, tint = CardBorder, modifier = Modifier.size(48.dp))
+                        Spacer(Modifier.height(10.dp))
+                        Text("Aucun film dans \"${status.label}\"", color = GrayLight, fontSize = 14.sp)
+                    }
+                }
+                else -> LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
+                    items(filmEntries) { entry ->
+                        FilmCard(entry = entry, onRemove = { removeFilm(entry) })
+                    }
+                }
+            }
         }
     }
 }
