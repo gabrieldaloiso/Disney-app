@@ -113,12 +113,11 @@ fun LoginScreen(navController: NavHostController) {
                 Spacer(modifier = Modifier.height(25.dp))
                 Column {
                     OutlinedTextField(
-                        label = { Text(text = "Email") },
+                        placeholder = { Text(text = "Email") },
                         value = email,
                         onValueChange = { email = it },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF1DADC0),
-                            focusedLabelColor = Color(0xFF1DADC0),
                             cursorColor = Color(0xFF1DADC0),
                             focusedContainerColor = Color(0xFFF5F5F5),
                             unfocusedContainerColor = Color(0xFFF5F5F5),
@@ -135,7 +134,7 @@ fun LoginScreen(navController: NavHostController) {
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
-                        label = { Text(text = "Password") },
+                        placeholder = { Text(text = "Password") },
                         value = password,
                         onValueChange = { password = it },
                         colors = OutlinedTextFieldDefaults.colors(

@@ -17,7 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
@@ -65,6 +70,10 @@ fun SignupScreen(navController: NavHostController) {
     var checked by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     val auth = FirebaseAuth.getInstance()
+    val lastNameFocus  = remember { FocusRequester() }
+    val emailFocus     = remember { FocusRequester() }
+    val passwordFocus  = remember { FocusRequester() }
+    val focusManager   = LocalFocusManager.current
 
     Box(
         modifier = Modifier
@@ -100,12 +109,11 @@ fun SignupScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(25.dp))
             Column {
                 OutlinedTextField(
-                    label = { Text(text = "First Name") },
+                    placeholder = { Text(text = "First Name") },
                     value = firstName,
                     onValueChange = { firstName = it },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF1DADC0),
-                        focusedLabelColor = Color(0xFF1DADC0),
                         cursorColor = Color(0xFF1DADC0),
                         focusedContainerColor = Color(0xFFF5F5F5),
                         unfocusedContainerColor = Color(0xFFF5F5F5),
@@ -114,18 +122,19 @@ fun SignupScreen(navController: NavHostController) {
                         unfocusedTextColor = Color(0xFF1C1B1F)
                     ),
                     modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
                     shape = MaterialTheme.shapes.medium,
                     leadingIcon = { Icon(imageVector = Icons.Outlined.Person, contentDescription = null) },
-                    keyboardOptions = KeyboardOptions.Default
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { lastNameFocus.requestFocus() })
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
-                    label = { Text(text = "Last Name") },
+                    placeholder = { Text(text = "Last Name") },
                     value = lastName,
                     onValueChange = { lastName = it },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF1DADC0),
-                        focusedLabelColor = Color(0xFF1DADC0),
                         cursorColor = Color(0xFF1DADC0),
                         focusedContainerColor = Color(0xFFF5F5F5),
                         unfocusedContainerColor = Color(0xFFF5F5F5),
@@ -133,19 +142,20 @@ fun SignupScreen(navController: NavHostController) {
                         focusedTextColor = Color(0xFF1C1B1F),
                         unfocusedTextColor = Color(0xFF1C1B1F)
                     ),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(lastNameFocus),
+                    singleLine = true,
                     shape = MaterialTheme.shapes.medium,
                     leadingIcon = { Icon(imageVector = Icons.Outlined.Person, contentDescription = null) },
-                    keyboardOptions = KeyboardOptions.Default
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { emailFocus.requestFocus() })
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
-                    label = { Text(text = "Email") },
+                    placeholder = { Text(text = "Email") },
                     value = email,
                     onValueChange = { email = it },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF1DADC0),
-                        focusedLabelColor = Color(0xFF1DADC0),
                         cursorColor = Color(0xFF1DADC0),
                         focusedContainerColor = Color(0xFFF5F5F5),
                         unfocusedContainerColor = Color(0xFFF5F5F5),
@@ -153,19 +163,20 @@ fun SignupScreen(navController: NavHostController) {
                         focusedTextColor = Color(0xFF1C1B1F),
                         unfocusedTextColor = Color(0xFF1C1B1F)
                     ),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(emailFocus),
+                    singleLine = true,
                     shape = MaterialTheme.shapes.medium,
                     leadingIcon = { Icon(imageVector = Icons.Outlined.Email, contentDescription = null) },
-                    keyboardOptions = KeyboardOptions.Default
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { passwordFocus.requestFocus() })
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
-                    label = { Text(text = "Password") },
+                    placeholder = { Text(text = "Password") },
                     value = password,
                     onValueChange = { password = it },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF1DADC0),
-                        focusedLabelColor = Color(0xFF1DADC0),
                         cursorColor = Color(0xFF1DADC0),
                         focusedContainerColor = Color(0xFFF5F5F5),
                         unfocusedContainerColor = Color(0xFFF5F5F5),
@@ -173,7 +184,8 @@ fun SignupScreen(navController: NavHostController) {
                         focusedTextColor = Color(0xFF1C1B1F),
                         unfocusedTextColor = Color(0xFF1C1B1F)
                     ),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(passwordFocus),
+                    singleLine = true,
                     shape = MaterialTheme.shapes.medium,
                     leadingIcon = { Icon(imageVector = Icons.Outlined.Lock, contentDescription = null) },
                     trailingIcon = {
@@ -185,7 +197,8 @@ fun SignupScreen(navController: NavHostController) {
                         }
                     },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions.Default
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
