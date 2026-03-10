@@ -33,7 +33,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.database.*
 
-
 private val GradTop    = Color(0xFF1A5C6E)
 private val GradBot    = Color(0xFF071220)
 private val Accent     = Color(0xFF1DADC0)
@@ -196,19 +195,8 @@ fun ProfileScreen(navController: NavHostController?) {
                     }
 
                     Spacer(Modifier.height(4.dp))
-                    Text(avatar.label, color = Accent, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(12.dp))
+                    Text(userEmail, color = Accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
 
-                    Text(
-                        text       = displayName,
-                        color      = White,
-                        fontSize   = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign  = TextAlign.Center
-                    )
-
-                    Spacer(Modifier.height(4.dp))
-                    Text(userEmail, color = GrayLight, fontSize = 15.sp)
 
                     Spacer(Modifier.height(24.dp))
 
@@ -238,8 +226,6 @@ fun ProfileScreen(navController: NavHostController?) {
 
                 }
             }
-
-
             item {
                 Divider(color = CardBorder, thickness = 1.dp, modifier = Modifier.padding(horizontal = 20.dp))
                 Spacer(Modifier.height(16.dp))
@@ -304,11 +290,11 @@ fun ProfileScreen(navController: NavHostController?) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
-                        .background(Color(0x22E53935), RoundedCornerShape(10.dp))
+                        .background(Accent.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
                 ) {
-                    Icon(Icons.Outlined.Logout, null, tint = Color(0xFFE57373), modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.Logout, null, tint = Accent, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Se déconnecter", color = Color(0xFFE57373), fontWeight = FontWeight.Medium, fontSize = 17.sp)
+                    Text("Se déconnecter", color = Accent, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 }
                 Spacer(Modifier.height(8.dp))
             }
