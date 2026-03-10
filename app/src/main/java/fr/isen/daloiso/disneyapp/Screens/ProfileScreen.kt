@@ -64,7 +64,7 @@ data class UserFilmEntry(
 enum class FilmStatus(val label: String, val icon: ImageVector, val color: Color) {
     WATCHED(      "Vu",      Icons.Outlined.Visibility, Accent),
     WANT_TO_WATCH("À voir",  Icons.Outlined.Bookmark,   Color(0xFF9B59B6)),
-    OWNED(        "Possédé", Icons.Outlined.Album,      Color(0xFF27AE60)),
+    OWNED(        "Je recherche", Icons.Outlined.Search,     Color(0xFF27AE60)),
     WANT_TO_SELL( "À céder", Icons.Outlined.Sell,       Color(0xFFE67E22))
 }
 
@@ -164,6 +164,7 @@ fun ProfileScreen(navController: NavHostController?) {
                     modifier            = Modifier.fillMaxWidth().padding(top = 56.dp, bottom = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+
                     // Avatar cliquable
                     Box(
                         contentAlignment = Alignment.BottomEnd,
@@ -283,21 +284,21 @@ fun ProfileScreen(navController: NavHostController?) {
                 }
             }
 
-            item {
-                Spacer(Modifier.height(24.dp))
-                TextButton(
-                    onClick = { showLogout = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .background(Accent.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
-                ) {
-                    Icon(Icons.Outlined.Logout, null, tint = Accent, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Se déconnecter", color = Accent, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                }
-                Spacer(Modifier.height(8.dp))
-            }
+        }
+
+        // ── Bouton déconnexion haut droite ────────────────────────────────────
+        IconButton(
+            onClick  = { showLogout = true },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 12.dp, end = 8.dp)
+        ) {
+            Icon(
+                imageVector        = Icons.Outlined.Logout,
+                contentDescription = "Se déconnecter",
+                tint               = Accent,
+                modifier           = Modifier.size(26.dp)
+            )
         }
     }
 }
