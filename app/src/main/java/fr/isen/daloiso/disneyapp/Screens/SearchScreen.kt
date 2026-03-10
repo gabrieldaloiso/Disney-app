@@ -376,7 +376,7 @@ fun buildAnnotatedText(text: String, highlight: String): androidx.compose.ui.tex
                 )
             )
         }
-       
+
         val end = idx + highlight.length
         builder.append(
             androidx.compose.ui.text.AnnotatedString(
