@@ -65,6 +65,7 @@ import com.google.gson.reflect.TypeToken
 import fr.isen.daloiso.disneyapp.Screens.FilmDetailScreen
 import fr.isen.daloiso.disneyapp.Screens.LoginScreen
 import fr.isen.daloiso.disneyapp.Screens.ProfileScreen
+import fr.isen.daloiso.disneyapp.Screens.SearchScreen
 import fr.isen.daloiso.disneyapp.Screens.SignupScreen
 import fr.isen.daloiso.disneyapp.ui.theme.DisneyTheme
 
