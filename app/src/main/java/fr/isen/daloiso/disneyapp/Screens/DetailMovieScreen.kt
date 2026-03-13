@@ -209,38 +209,74 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (posterUrl != null) {
-            AsyncImage(
-                model = posterUrl,
-                contentDescription = film.titre,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .width(250.dp)
-                    .height(350.dp)
-                    .shadow(
-                        elevation = 24.dp,
-                        shape = RoundedCornerShape(24.dp),
-                        ambientColor = Accent.copy(alpha = 0.4f),
-                        spotColor = Accent.copy(alpha = 0.6f)
-                    )
-                    .clip(RoundedCornerShape(24.dp))
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .width(200.dp)
-                    .height(300.dp)
-                    .shadow(16.dp, RoundedCornerShape(24.dp))
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(CardBgDeep),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Movie,
-                    contentDescription = null,
-                    tint = Accent.copy(alpha = 0.4f),
-                    modifier = Modifier.size(64.dp)
+        Box(
+            modifier = Modifier
+                .width(250.dp)
+                .height(350.dp)
+        ) {
+            if (posterUrl != null) {
+                AsyncImage(
+                    model = posterUrl,
+                    contentDescription = film.titre,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .shadow(
+                            elevation = 24.dp,
+                            shape = RoundedCornerShape(24.dp),
+                            ambientColor = Accent.copy(alpha = 0.4f),
+                            spotColor = Accent.copy(alpha = 0.6f)
+                        )
+                        .clip(RoundedCornerShape(24.dp))
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .shadow(16.dp, RoundedCornerShape(24.dp))
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(CardBgDeep),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Movie,
+                        contentDescription = null,
+                        tint = Accent.copy(alpha = 0.4f),
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
+            }
+            voteAverage?.let { score ->
+                val scoreColor = when {
+                    score >= 7.0 -> Color(0xFF1DB085)
+                    score >= 5.0 -> Color(0xFFF0A500)
+                    else         -> Color(0xFFE05252)
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(10.dp)
+                        .background(
+                            color = Color(0xCC000000),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 7.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Star,
+                        contentDescription = null,
+                        tint = scoreColor,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = "%.1f".format(score),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = scoreColor
+                    )
+                }
             }
         }
 
@@ -292,52 +328,7 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
                     InfoRow(icon = Icons.Outlined.Movie, label = "Genre", value = it)
                 }
 
-                voteAverage?.let { score ->
-                    HorizontalDivider(color = Divider, modifier = Modifier.padding(vertical = 12.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Star,
-                            contentDescription = null,
-                            tint = Accent,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "  Score TMDB",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextSecondary,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            val scoreColor = when {
-                                score >= 7.0 -> Color(0xFF1DB085)
-                                score >= 5.0 -> Color(0xFFF0A500)
-                                else         -> Color(0xFFE05252)
-                            }
-                            Text(
-                                text = "%.1f/10".format(score),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = scoreColor
-                            )
-                            voteCount?.let { count ->
-                                Text(
-                                    text = "($count votes)",
-                                    fontSize = 13.sp,
-                                    color = TextSecondary
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (film.annee == null && film.genre == null && voteAverage == null) {
+                if (film.annee == null && film.genre == null) {
                     Text(
                         text = "Aucune information disponible.",
                         fontSize = 20.sp,
