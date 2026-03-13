@@ -3,7 +3,7 @@ package fr.isen.daloiso.disneyapp
 import Categorie
 import Film
 import Franchise
-import SousSaga
+
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -12,29 +12,33 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
+
+import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Store
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -42,13 +46,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -56,6 +65,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -66,25 +76,35 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import fr.isen.daloiso.disneyapp.Screens.FilmDetailScreen
 import fr.isen.daloiso.disneyapp.Screens.FilmStatus
+import fr.isen.daloiso.disneyapp.Screens.FranchiseDetailScreen
 import fr.isen.daloiso.disneyapp.Screens.LoginScreen
 import fr.isen.daloiso.disneyapp.Screens.MarketScreen
 import fr.isen.daloiso.disneyapp.Screens.ProfileFilmsScreen
 import fr.isen.daloiso.disneyapp.Screens.ProfileScreen
 import fr.isen.daloiso.disneyapp.Screens.SearchScreen
 import fr.isen.daloiso.disneyapp.Screens.SignupScreen
-import fr.isen.daloiso.disneyapp.ui.theme.DisneyTheme
 
-// ── Couleurs ──────────────────────────────────────────────────────────────────
+import fr.isen.daloiso.disneyapp.ui.theme.DisneyTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.URL
+import java.net.URLEncoder
+
+
 private val BgGradient    = Brush.linearGradient(listOf(Color(0xFF1A5C6E), Color(0xFF071220)))
-private val Light         = Color(0xFFF5F5F5)
 private val CardBg        = Color(0xFF1E3A45)
-private val CardBgDeep    = Color(0xFF122533)
 private val TextPrimary   = Color.White
 private val TextSecondary = Color(0xFFB0C8D0)
-private val AccentPurple  = Color(0xFF6650A4)
-private val screensWithoutBottomBar = listOf("register", "login", "film_detail")
+private val AccentTeal    = Color(0xFF1DADC0)
+private val screensWithoutBottomBar = listOf("register", "login", "film_detail", "franchise_detail")
+
 object FilmSelection {
     var selectedFilm: Film? = null
+}
+
+object FranchiseSelection {
+    var selectedFranchise: Franchise? = null
 }
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -136,10 +156,14 @@ class MainActivity : ComponentActivity() {
                                 val status = FilmStatus.values().find { it.name == statusName } ?: return@composable
                                 ProfileFilmsScreen(navController = navController, status = status)
                             }
-                            // ── 2. Route film_detail ajoutée ─────────────────
                             composable("film_detail") {
                                 FilmSelection.selectedFilm?.let { film ->
                                     FilmDetailScreen(navController = navController, film = film)
+                                }
+                            }
+                            composable("franchise_detail") {
+                                FranchiseSelection.selectedFranchise?.let { franchise ->
+                                    FranchiseDetailScreen(navController = navController, franchise = franchise)
                                 }
                             }
                         }
@@ -152,175 +176,130 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun HomeScreen(navController: NavHostController) {
     val categories = remember { mutableStateListOf<Categorie>() }
-    val expandableCategories = remember { mutableStateListOf<Categorie>() }
 
     LaunchedEffect(Unit) {
         DataBaseHelper().getCategories { categories.addAll(it) }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Image(
-            painter = painterResource(id = R.drawable.disneymoins),
-            contentDescription = "Disney Logo",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(90.dp)
-                .padding(top = 24.dp, start = 24.dp, bottom = 8.dp)
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item {
+            Image(
+                painter = painterResource(id = R.drawable.disneymoins),
+                contentDescription = "Disney Logo",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp)
+                    .padding(top = 24.dp, start = 24.dp, bottom = 8.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        items(categories) { categorie ->
+            CategoryCarouselSection(categorie = categorie, navController = navController)
+            Spacer(modifier = Modifier.height(28.dp))
+        }
+    }
+}
+
+@Composable
+fun CategoryCarouselSection(categorie: Categorie, navController: NavHostController) {
+    Column {
+        Text(
+            text = categorie.categorie,
+            color = TextPrimary,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 16.dp, bottom = 12.dp)
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
-            items(categories) { categorie ->
-                val isExpanded = expandableCategories.any { it.categorie == categorie.categorie }
-                CategoryCard(
-                    categorie = categorie,
-                    isExpanded = isExpanded,
-                    onToggle = {
-                        if (isExpanded) expandableCategories.removeAll { it.categorie == categorie.categorie }
-                        else expandableCategories.add(categorie)
-                    },
-                    navController = navController
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(categorie.franchises) { franchise ->
+                FranchiseCard(franchise = franchise, navController = navController)
             }
         }
     }
 }
-@Composable
-fun CategoryCard(
-    categorie: Categorie,
-    isExpanded: Boolean,
-    onToggle: () -> Unit,
-    navController: NavHostController
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = CardBg),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onToggle() }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = categorie.categorie,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    imageVector = if (isExpanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = Light
-                )
-            }
-            if (isExpanded) {
-                FranchiseList(franchises = categorie.franchises, navController = navController)
-            }
-        }
-    }
-}
-@Composable
-fun FranchiseList(franchises: List<Franchise>, navController: NavHostController) {
-    val expandableFranchises = remember { mutableStateListOf<Franchise>() }
 
-    Column(
+@Composable
+fun FranchiseCard(franchise: Franchise, navController: NavHostController) {
+    var posterUrl by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(franchise.nom) {
+        posterUrl = fetchCollectionPoster(franchise.nom)
+    }
+
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .background(CardBgDeep)
-            .padding(start = 16.dp, bottom = 8.dp)
+            .width(140.dp)
+            .height(210.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable {
+                FranchiseSelection.selectedFranchise = franchise
+                navController.navigate("franchise_detail")
+            }
     ) {
-        franchises.forEach { franchise ->
-            val isExpanded = expandableFranchises.any { it.nom == franchise.nom }
-            Row(
+        if (posterUrl != null) {
+            AsyncImage(
+                model = posterUrl,
+                contentDescription = franchise.nom,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        if (isExpanded) expandableFranchises.removeAll { it.nom == franchise.nom }
-                        else expandableFranchises.add(franchise)
-                    }
-                    .padding(vertical = 10.dp, horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .background(CardBg),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "▸  ${franchise.nom}",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Light,
-                    modifier = Modifier.weight(1f)
-                )
                 Icon(
-                    imageVector = if (isExpanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                    imageVector = Icons.Outlined.Movie,
                     contentDescription = null,
-                    tint = Light
+                    tint = AccentTeal,
+                    modifier = Modifier.size(48.dp)
                 )
-            }
-            if (isExpanded) {
-                val sagas = franchise.sousSagas
-                if (sagas != null) SagaList(sagas, navController) else FilmList(franchise.tousLesFilms(), navController)
             }
         }
-    }
-}
-@Composable
-fun SagaList(sousSagas: List<SousSaga>, navController: NavHostController) {
-    val expandableSaga = remember { mutableStateListOf<SousSaga>() }
 
-    Column(modifier = Modifier.padding(start = 16.dp)) {
-        sousSagas.forEach { saga ->
-            val isExpanded = expandableSaga.any { it.nom == saga.nom }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        if (isExpanded) expandableSaga.removeAll { it.nom == saga.nom }
-                        else expandableSaga.add(saga)
-                    }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "◆  ${saga.nom}",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextSecondary,
-                    modifier = Modifier.weight(1f)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color(0xCC000000)),
+                        startY = 120f
+                    )
                 )
-                Icon(
-                    imageVector = if (isExpanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = TextSecondary
-                )
-            }
-            if (isExpanded) {
-                FilmList(saga.films, navController)
-            }
-        }
+        )
+        Text(
+            text = franchise.nom,
+            color = TextPrimary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            lineHeight = 16.sp,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(8.dp)
+        )
     }
 }
-@Composable
-fun FilmList(films: List<Film>, navController: NavHostController) {
-    Column(modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)) {
-        films.forEach { film ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        FilmSelection.selectedFilm = film
-                        navController.navigate("film_detail")
-                    }
-                    .padding(vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "•", color = AccentPurple, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
-                Text(text = film.titre, fontSize = 13.sp, color = TextPrimary, modifier = Modifier.weight(1f))
-                film.annee?.let {
-                    Text(text = "($it)", fontSize = 12.sp, color = TextSecondary)
-                }
-            }
+
+suspend fun fetchCollectionPoster(query: String): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val encoded = URLEncoder.encode(query, "UTF-8")
+            val apiKey = "37b0694785cebb5ccca028e53f38e0cb"
+            val response = URL("https://api.themoviedb.org/3/search/collection?api_key=$apiKey&query=$encoded&language=fr-FR").readText()
+            val results = JSONObject(response).getJSONArray("results")
+            if (results.length() > 0) {
+                val path = results.getJSONObject(0).optString("poster_path", "")
+                if (path.isNotEmpty()) "https://image.tmdb.org/t/p/w500$path" else null
+            } else null
+        } catch (e: Exception) {
+            null
         }
     }
 }
