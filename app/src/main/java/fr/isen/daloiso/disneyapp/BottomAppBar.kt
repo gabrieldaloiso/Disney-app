@@ -5,9 +5,10 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
@@ -19,11 +20,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavController
+
 data class BottomNavItem(
     val title: String,
     val route: String,
     val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector
+    val unselectedIcon: ImageVector,
+    val hasBadge: Boolean = false
 )
 
 val bottomNavItems = listOf(
@@ -56,12 +59,14 @@ fun BottomAppBar(items: List<BottomNavItem>, navController: NavController) {
                     navController.navigate(item.route)
                 },
                 icon = {
-                    TabBarIcon(
-                        isSelected = selectedTabIndex == index,
-                        selectedIcon = item.selectedIcon,
-                        unselectedIcon = item.unselectedIcon,
-                        title = item.title
-                    )
+                    BadgedBox(badge = { if (item.hasBadge) Badge() }) {
+                        TabBarIcon(
+                            isSelected = selectedTabIndex == index,
+                            selectedIcon = item.selectedIcon,
+                            unselectedIcon = item.unselectedIcon,
+                            title = item.title
+                        )
+                    }
                 },
                 label = {
                     Text(

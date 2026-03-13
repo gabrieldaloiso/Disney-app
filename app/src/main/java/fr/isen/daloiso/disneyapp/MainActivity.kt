@@ -47,6 +47,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -118,9 +119,62 @@ class MainActivity : ComponentActivity() {
                 val currentRoute = navBackStackEntry?.destination?.route
                 val startDestination = if (FirebaseAuth.getInstance().currentUser != null) "home" else "register"
 
+                val uid = FirebaseAuth.getInstance().currentUser?.uid
+                var marketBadge by remember { mutableStateOf(false) }
+
+                DisposableEffect(uid) {
+                    if (uid == null) return@DisposableEffect onDispose {}
+                    val db = com.google.firebase.database.FirebaseDatabase.getInstance()
+
+                    var hasNotif  = false
+                    var seekingIds = emptySet<String>()
+                    var marketIds  = emptySet<String>()
+
+                    fun updateBadge() { marketBadge = hasNotif || (seekingIds intersect marketIds).isNotEmpty() }
+
+                    val notifListener = object : ValueEventListener {
+                        override fun onDataChange(snap: DataSnapshot) {
+                            hasNotif = snap.childrenCount > 0
+                            updateBadge()
+                        }
+                        override fun onCancelled(e: DatabaseError) {}
+                    }
+                    val myFilmsListener = object : ValueEventListener {
+                        override fun onDataChange(snap: DataSnapshot) {
+                            seekingIds = snap.children.filter {
+                                it.child("statuses").child(FilmStatus.OWNED.name).getValue(Boolean::class.java) == true
+                            }.mapNotNull { it.key }.toSet()
+                            updateBadge()
+                        }
+                        override fun onCancelled(e: DatabaseError) {}
+                    }
+                    val marketListener = object : ValueEventListener {
+                        override fun onDataChange(snap: DataSnapshot) {
+                            marketIds = snap.children.filter { filmSnap ->
+                                filmSnap.child("sellers").children.any { it.key != uid }
+                            }.mapNotNull { it.key }.toSet()
+                            updateBadge()
+                        }
+                        override fun onCancelled(e: DatabaseError) {}
+                    }
+
+                    val notifRef   = db.getReference("users/$uid/notifications")
+                    val myFilmsRef = db.getReference("users/$uid/films")
+                    val marketRef  = db.getReference("market")
+                    notifRef.addValueEventListener(notifListener)
+                    myFilmsRef.addValueEventListener(myFilmsListener)
+                    marketRef.addValueEventListener(marketListener)
+
+                    onDispose {
+                        notifRef.removeEventListener(notifListener)
+                        myFilmsRef.removeEventListener(myFilmsListener)
+                        marketRef.removeEventListener(marketListener)
+                    }
+                }
+
                 val bottomItems = listOf(
                     BottomNavItem("Accueil",   "home",    Icons.Filled.Home,   Icons.Outlined.Home),
-                    BottomNavItem("Marché",    "market",  Icons.Filled.Store,  Icons.Outlined.Store),
+                    BottomNavItem("Marché",    "market",  Icons.Filled.Store,  Icons.Outlined.Store,  hasBadge = marketBadge),
                     BottomNavItem("Recherche", "search",  Icons.Filled.Search, Icons.Outlined.Search),
                     BottomNavItem("Profil",    "profile", Icons.Filled.Person, Icons.Outlined.Person)
                 )
