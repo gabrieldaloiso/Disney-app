@@ -289,18 +289,30 @@ fun FranchiseCard(franchise: Franchise, navController: NavHostController) {
 
 suspend fun fetchCollectionPoster(query: String): String? {
     return withContext(Dispatchers.IO) {
-        try {
-            val encoded = URLEncoder.encode(query, "UTF-8")
-            val apiKey = "37b0694785cebb5ccca028e53f38e0cb"
-            val response = URL("https://api.themoviedb.org/3/search/collection?api_key=$apiKey&query=$encoded&language=fr-FR").readText()
-            val results = JSONObject(response).getJSONArray("results")
-            if (results.length() > 0) {
-                val path = results.getJSONObject(0).optString("poster_path", "")
-                if (path.isNotEmpty()) "https://image.tmdb.org/t/p/w500$path" else null
-            } else null
-        } catch (e: Exception) {
-            null
+        val apiKey = "37b0694785cebb5ccca028e53f38e0cb"
+        val base = "https://image.tmdb.org/t/p/w500"
+        val simplified = query
+            .replace(Regex("cinematic universe", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("universe", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("collection", RegexOption.IGNORE_CASE), "")
+            .trim()
+
+        fun extractPosterPath(url: String): String? {
+            return try {
+                val results = JSONObject(URL(url).readText()).getJSONArray("results")
+                if (results.length() > 0) {
+                    val path = results.getJSONObject(0).optString("poster_path", "")
+                    if (path.isNotEmpty()) "$base$path" else null
+                } else null
+            } catch (e: Exception) { null }
         }
+
+        val encodedFull = URLEncoder.encode(query, "UTF-8")
+        val encodedSimple = URLEncoder.encode(simplified, "UTF-8")
+
+        extractPosterPath("https://api.themoviedb.org/3/search/collection?api_key=$apiKey&query=$encodedFull&language=fr-FR")
+            ?: extractPosterPath("https://api.themoviedb.org/3/search/collection?api_key=$apiKey&query=$encodedSimple&language=fr-FR")
+            ?: extractPosterPath("https://api.themoviedb.org/3/search/movie?api_key=$apiKey&query=$encodedSimple&language=fr-FR")
     }
 }
 class DataBaseHelper {
