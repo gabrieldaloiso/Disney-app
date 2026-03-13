@@ -98,7 +98,6 @@ suspend fun fetchTmdbData(titre: String, annee: Int?): TmdbMovieData {
     }
 }
 
-// Kept for backward compatibility with other screens
 suspend fun fetchPosterUrl(titre: String, annee: Int?): String? =
     fetchTmdbData(titre, annee).posterUrl
 
