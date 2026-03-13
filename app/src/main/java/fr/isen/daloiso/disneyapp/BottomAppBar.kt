@@ -19,8 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavController
-
-// ── Data class ────────────────────────────────────────────────────────────────
 data class BottomNavItem(
     val title: String,
     val route: String,
@@ -28,7 +26,6 @@ data class BottomNavItem(
     val unselectedIcon: ImageVector
 )
 
-// ── Items de navigation (à adapter selon tes routes) ─────────────────────────
 val bottomNavItems = listOf(
     BottomNavItem(
         title = "Accueil",
@@ -43,8 +40,6 @@ val bottomNavItems = listOf(
         unselectedIcon = Icons.Outlined.Person
     )
 )
-
-// ── Composables ───────────────────────────────────────────────────────────────
 @Composable
 fun BottomAppBar(items: List<BottomNavItem>, navController: NavController) {
     var selectedTabIndex by rememberSaveable { mutableStateOf(0) }

@@ -82,16 +82,10 @@ private val CardBgDeep    = Color(0xFF122533)
 private val TextPrimary   = Color.White
 private val TextSecondary = Color(0xFFB0C8D0)
 private val AccentPurple  = Color(0xFF6650A4)
-
-// ── 1. "film_detail" ajouté ───────────────────────────────────────────────────
 private val screensWithoutBottomBar = listOf("register", "login", "film_detail")
-
-// ── Singleton film sélectionné ────────────────────────────────────────────────
 object FilmSelection {
     var selectedFilm: Film? = null
 }
-
-// ── Activity ──────────────────────────────────────────────────────────────────
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -155,8 +149,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-// ── Home ──────────────────────────────────────────────────────────────────────
 @Composable
 fun HomeScreen(navController: NavHostController) {
     val categories = remember { mutableStateListOf<Categorie>() }
@@ -193,8 +185,6 @@ fun HomeScreen(navController: NavHostController) {
         }
     }
 }
-
-// ── Catégorie ─────────────────────────────────────────────────────────────────
 @Composable
 fun CategoryCard(
     categorie: Categorie,
@@ -233,8 +223,6 @@ fun CategoryCard(
         }
     }
 }
-
-// ── Franchises ────────────────────────────────────────────────────────────────
 @Composable
 fun FranchiseList(franchises: List<Franchise>, navController: NavHostController) {
     val expandableFranchises = remember { mutableStateListOf<Franchise>() }
@@ -277,8 +265,6 @@ fun FranchiseList(franchises: List<Franchise>, navController: NavHostController)
         }
     }
 }
-
-// ── Sous-sagas ────────────────────────────────────────────────────────────────
 @Composable
 fun SagaList(sousSagas: List<SousSaga>, navController: NavHostController) {
     val expandableSaga = remember { mutableStateListOf<SousSaga>() }
@@ -315,9 +301,6 @@ fun SagaList(sousSagas: List<SousSaga>, navController: NavHostController) {
         }
     }
 }
-
-// ── Films ─────────────────────────────────────────────────────────────────────
-// ── 3. navController ajouté + films cliquables ───────────────────────────────
 @Composable
 fun FilmList(films: List<Film>, navController: NavHostController) {
     Column(modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)) {
@@ -341,8 +324,6 @@ fun FilmList(films: List<Film>, navController: NavHostController) {
         }
     }
 }
-
-// ── Firebase helper ───────────────────────────────────────────────────────────
 class DataBaseHelper {
     fun getCategories(handler: (List<Categorie>) -> Unit) {
         val database = Firebase.database

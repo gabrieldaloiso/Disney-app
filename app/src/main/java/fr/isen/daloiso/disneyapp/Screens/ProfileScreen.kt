@@ -248,7 +248,6 @@ fun ProfileScreen(navController: NavHostController?) {
             }
         }
 
-        // Roue paramètres — haut gauche
         IconButton(
             onClick  = { showPasswordDialog = true },
             modifier = Modifier.align(Alignment.TopStart).padding(top = 12.dp, start = 8.dp)
@@ -256,7 +255,6 @@ fun ProfileScreen(navController: NavHostController?) {
             Icon(Icons.Outlined.Settings, "Paramètres", tint = Accent, modifier = Modifier.size(26.dp))
         }
 
-        // Déconnexion — haut droite
         IconButton(
             onClick  = { showLogout = true },
             modifier = Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 8.dp)

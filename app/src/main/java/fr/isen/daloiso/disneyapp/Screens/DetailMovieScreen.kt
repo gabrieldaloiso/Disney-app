@@ -56,8 +56,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
-
-// ── Couleurs ──────────────────────────────────────────────────────────────────
 private val Accent        = Color(0xFF1DADC0)
 private val CardBg        = Color(0xFF1E3A45)
 private val CardBgDeep    = Color(0xFF122533)
@@ -68,8 +66,6 @@ private val Divider       = Color(0xFF1A5C6E)
 
 private const val TMDB_API_KEY   = "37b0694785cebb5ccca028e53f38e0cb"
 private const val TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/w500"
-
-// ── Récupération de l'affiche via TMDB ────────────────────────────────────────
 suspend fun fetchPosterUrl(titre: String, annee: Int?): String? {
     return withContext(Dispatchers.IO) {
         try {
@@ -89,7 +85,6 @@ suspend fun fetchPosterUrl(titre: String, annee: Int?): String? {
     }
 }
 
-// ── Règles d'incompatibilité de statuts ───────────────────────────────────────
 fun incompatibleWith(status: FilmStatus): Set<FilmStatus> = when (status) {
     FilmStatus.WATCHED       -> setOf(FilmStatus.WANT_TO_WATCH)
     FilmStatus.WANT_TO_WATCH -> setOf(FilmStatus.WATCHED)
@@ -98,7 +93,6 @@ fun incompatibleWith(status: FilmStatus): Set<FilmStatus> = when (status) {
     FilmStatus.POSSESSED     -> setOf(FilmStatus.OWNED, FilmStatus.WANT_TO_SELL)
 }
 
-// ── Écran détail film ─────────────────────────────────────────────────────────
 @Composable
 fun FilmDetailScreen(navController: NavHostController, film: Film) {
     var posterUrl by remember { mutableStateOf<String?>(null) }
@@ -151,7 +145,6 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
             filmRef.child("statuses").setValue(statusesMap)
         }
 
-        // Mettre à jour l'index marché
         marketRef.child("sellers/$uid").removeValue()
         marketRef.child("seekers/$uid").removeValue()
         if (newStatuses.isNotEmpty()) {
@@ -171,7 +164,6 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        // ── Header ────────────────────────────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -289,7 +281,6 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
             }
         }
 
-        // ── Boutons collection alignés ────────────────────────────────────────
         Spacer(modifier = Modifier.height(32.dp))
         Row(
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp),
@@ -305,7 +296,6 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
     }
 }
 
-// ── Ligne d'info ──────────────────────────────────────────────────────────────
 @Composable
 fun InfoRow(icon: ImageVector, label: String, value: String) {
     Row(
@@ -333,8 +323,6 @@ fun InfoRow(icon: ImageVector, label: String, value: String) {
         )
     }
 }
-
-// ── Bouton circulaire statut ───────────────────────────────────────────────────
 @Composable
 fun StatusCircleButton(status: FilmStatus, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
