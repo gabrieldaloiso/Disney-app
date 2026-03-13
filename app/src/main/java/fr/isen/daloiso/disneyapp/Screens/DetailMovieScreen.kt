@@ -22,7 +22,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Tag
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -66,7 +68,14 @@ private val Divider       = Color(0xFF1A5C6E)
 
 private const val TMDB_API_KEY   = "37b0694785cebb5ccca028e53f38e0cb"
 private const val TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/w500"
-suspend fun fetchPosterUrl(titre: String, annee: Int?): String? {
+
+data class TmdbMovieData(
+    val posterUrl: String?,
+    val voteAverage: Double?,
+    val voteCount: Int?
+)
+
+suspend fun fetchTmdbData(titre: String, annee: Int?): TmdbMovieData {
     return withContext(Dispatchers.IO) {
         try {
             val query = URLEncoder.encode(titre, "UTF-8")
@@ -76,14 +85,22 @@ suspend fun fetchPosterUrl(titre: String, annee: Int?): String? {
             val json = JSONObject(response)
             val results = json.getJSONArray("results")
             if (results.length() > 0) {
-                val posterPath = results.getJSONObject(0).optString("poster_path", "")
-                if (posterPath.isNotEmpty()) "$TMDB_IMAGE_URL$posterPath" else null
-            } else null
+                val movie = results.getJSONObject(0)
+                val posterPath = movie.optString("poster_path", "")
+                val posterUrl = if (posterPath.isNotEmpty()) "$TMDB_IMAGE_URL$posterPath" else null
+                val voteAverage = movie.optDouble("vote_average").takeIf { !it.isNaN() }
+                val voteCount = movie.optInt("vote_count").takeIf { it > 0 }
+                TmdbMovieData(posterUrl, voteAverage, voteCount)
+            } else TmdbMovieData(null, null, null)
         } catch (e: Exception) {
-            null
+            TmdbMovieData(null, null, null)
         }
     }
 }
+
+// Kept for backward compatibility with other screens
+suspend fun fetchPosterUrl(titre: String, annee: Int?): String? =
+    fetchTmdbData(titre, annee).posterUrl
 
 fun incompatibleWith(status: FilmStatus): Set<FilmStatus> = when (status) {
     FilmStatus.WATCHED       -> setOf(FilmStatus.WANT_TO_WATCH)
@@ -95,14 +112,19 @@ fun incompatibleWith(status: FilmStatus): Set<FilmStatus> = when (status) {
 
 @Composable
 fun FilmDetailScreen(navController: NavHostController, film: Film) {
-    var posterUrl by remember { mutableStateOf<String?>(null) }
+    var posterUrl    by remember { mutableStateOf<String?>(null) }
+    var voteAverage  by remember { mutableStateOf<Double?>(null) }
+    var voteCount    by remember { mutableStateOf<Int?>(null) }
 
     val uid    = FirebaseAuth.getInstance().currentUser?.uid
     val filmId = film.titre.replace(Regex("[^A-Za-z0-9]"), "_")
     var currentStatuses by remember { mutableStateOf<Set<FilmStatus>>(emptySet()) }
 
     LaunchedEffect(film.titre) {
-        posterUrl = fetchPosterUrl(film.titre, film.annee)
+        val data = fetchTmdbData(film.titre, film.annee)
+        posterUrl   = data.posterUrl
+        voteAverage = data.voteAverage
+        voteCount   = data.voteCount
     }
 
     LaunchedEffect(filmId, uid) {
@@ -270,7 +292,52 @@ fun FilmDetailScreen(navController: NavHostController, film: Film) {
                     InfoRow(icon = Icons.Outlined.Movie, label = "Genre", value = it)
                 }
 
-                if (film.annee == null && film.genre == null) {
+                voteAverage?.let { score ->
+                    HorizontalDivider(color = Divider, modifier = Modifier.padding(vertical = 12.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Star,
+                            contentDescription = null,
+                            tint = Accent,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "  Score TMDB",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextSecondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val scoreColor = when {
+                                score >= 7.0 -> Color(0xFF1DB085)
+                                score >= 5.0 -> Color(0xFFF0A500)
+                                else         -> Color(0xFFE05252)
+                            }
+                            Text(
+                                text = "%.1f/10".format(score),
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = scoreColor
+                            )
+                            voteCount?.let { count ->
+                                Text(
+                                    text = "($count votes)",
+                                    fontSize = 13.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (film.annee == null && film.genre == null && voteAverage == null) {
                     Text(
                         text = "Aucune information disponible.",
                         fontSize = 20.sp,
